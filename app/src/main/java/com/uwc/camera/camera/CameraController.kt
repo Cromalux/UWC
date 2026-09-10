@@ -179,12 +179,14 @@ class CameraController(private val context: Context) {
         val ratio = if (photoMode) AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
                     else AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY
 
-        val previewBuilder = Preview.Builder()
-            .setTargetRotation(rotation)
-            .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio).build())
-        Camera2Interop.Extender(previewBuilder).setSessionCaptureCallback(sessionCallback)
-        val preview = previewBuilder.build()
-        preview.surfaceProvider = previewView.surfaceProvider
+        fun buildPreview(dr: DynamicRange): Preview {
+            val pb = Preview.Builder()
+                .setTargetRotation(rotation)
+                .setDynamicRange(dr)
+                .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio).build())
+            Camera2Interop.Extender(pb).setSessionCaptureCallback(sessionCallback)
+            return pb.build().also { it.surfaceProvider = previewView.surfaceProvider }
+        }
 
         fun photoUseCase(fmt: PhotoFormat): ImageCapture {
             val outFmt = when (fmt) {
@@ -215,6 +217,9 @@ class CameraController(private val context: Context) {
             return b.build() to label
         }
 
+        // ImageAnalysis ne supporte que le SDR dans CameraX (setDynamicRange(HLG) lève une exception).
+        // On le construit donc toujours en SDR ; en vidéo HLG10 la combinaison échoue proprement et le
+        // peaking est abandonné (cascade), au lieu de crasher.
         fun analysisUseCase(): ImageAnalysis = ImageAnalysis.Builder()
             .setTargetRotation(rotation)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -245,6 +250,7 @@ class CameraController(private val context: Context) {
         var info: String
 
         if (photoMode) {
+            val preview = buildPreview(DynamicRange.SDR)
             val wantedFmt = c.coercePhotoFormat(settings.photoFormat)
             // Dégradation : peaking d'abord, puis format (RAW → JPEG).
             data class P(val fmt: PhotoFormat, val peaking: Boolean)
@@ -275,16 +281,20 @@ class CameraController(private val context: Context) {
             }.distinct()
             var bound: V? = null; var vlabel = ""
             for (a in attempts) {
+                val dr = if (a.hlg) DynamicRange.HLG_10_BIT else DynamicRange.SDR
+                val prev = buildPreview(dr)
                 val (vc, label) = videoUseCase(a.hlg)
+                // L'analyseur de peaking prend la même plage dynamique que la vidéo (HLG10) :
+                // c'est ce qui permet peaking + 4K HLG10 simultanés.
                 val an = if (a.peaking) analysisUseCase() else null
-                if (if (an != null) tryBind(preview, vc, an) else tryBind(preview, vc)) {
+                if (if (an != null) tryBind(prev, vc, an) else tryBind(prev, vc)) {
                     videoCapture = vc; analysis = an; vlabel = label; bound = a; break
                 }
             }
             if (bound == null) { failBind(); return }
             _peakingActive.value = bound.peaking
             info = "VIDÉO · $vlabel"
-            if (bound.hlg != wantedHlg) onStatus("HLG10 indisponible avec le peaking → SDR")
+            if (bound.hlg != wantedHlg) onStatus("HLG10 indisponible ici → SDR")
             else if (bound.peaking != wantPeaking) onStatus("Focus peaking indisponible en $vlabel")
         }
 

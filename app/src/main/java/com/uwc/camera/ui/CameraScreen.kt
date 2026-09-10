@@ -99,7 +99,9 @@ private fun CameraPreview(vm: UwcViewModel, settings: CameraSettings, ready: Boo
         LaunchedEffect(bindConfig, ready, laidOut, v) {
             if (ready && laidOut && v != null) vm.controller.bind(owner, v, vm.settings.value)
         }
-        if (settings.peakingEnabled) PeakingOverlay(vm.controller.peaking)
+        val peakingActive by vm.controller.peakingActive.collectAsState()
+        LaunchedEffect(peakingActive) { if (!peakingActive) vm.controller.peaking.clear() }
+        if (peakingActive) PeakingOverlay(vm.controller.peaking)
     }
 }
 

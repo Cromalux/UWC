@@ -51,7 +51,7 @@ data class CameraSettings(
 
     val screenMode: ScreenMode = ScreenMode.MAX,
     val blackoutWhenLocked: Boolean = false,
-    val usePinning: Boolean = true,
+    val usePinning: Boolean = false,
     val volumeShutterWhenUnlocked: Boolean = true,
     val onboardingDone: Boolean = false,
 )

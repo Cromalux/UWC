@@ -192,8 +192,8 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                         ChipRow(ScreenMode.entries, s.screenMode, label = { it.label }) { m -> vm.update { it.copy(screenMode = m) } }
                     }
                     SwitchRow("Écran noir une fois verrouillé", s.blackoutWhenLocked) { vm.update { it.copy(blackoutWhenLocked = !it.blackoutWhenLocked) } }
-                    SwitchRow("Épingler l'app au verrouillage (recommandé)", s.usePinning) { vm.update { it.copy(usePinning = !it.usePinning) } }
-                    Hint("L'épinglage bloque la barre de navigation, le volet de notifications et l'Assistant. Android demande une confirmation la première fois, et « Épinglage d'applications » doit être activé dans Paramètres › Sécurité.")
+                    SwitchRow("Épingler l'app au verrouillage", s.usePinning) { vm.update { it.copy(usePinning = !it.usePinning) } }
+                    Hint("Désactivé par défaut. Le verrouillage bloque déjà le tactile et masque les barres (mode immersif). L'épinglage ajoute un blocage système de la barre de navigation et des notifications, MAIS Android impose alors un message gris à confirmer à chaque verrouillage — n'active ceci que si tu acceptes ce message.")
                     SwitchRow("Boutons volume actifs aussi hors verrouillage", s.volumeShutterWhenUnlocked) { vm.update { it.copy(volumeShutterWhenUnlocked = !it.volumeShutterWhenUnlocked) } }
                     Hint("Désactivé, le volume ne sert qu'une fois verrouillé — mais alors le verrouillage lui-même doit se faire par Vol+ long… donc laisse-le activé.")
                 }
