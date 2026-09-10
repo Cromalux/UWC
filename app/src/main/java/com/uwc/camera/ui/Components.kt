@@ -291,3 +291,18 @@ fun ModeToggle(mode: com.uwc.camera.camera.CaptureMode, onToggle: () -> Unit) {
         }
     }
 }
+
+/** Bouton de fermeture : une croix dessinée, rond, cohérent avec la roue crantée. */
+@Composable
+fun CloseButton(onClick: () -> Unit) {
+    Box(
+        Modifier.size(48.dp).clip(CircleShape).background(Color(0xFF2A2A2A)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(22.dp)) {
+            val c = Color(0xFFFFFFFF)
+            drawLine(c, Offset(0f, 0f), Offset(size.width, size.height), strokeWidth = 6f, cap = StrokeCap.Round)
+            drawLine(c, Offset(size.width, 0f), Offset(0f, size.height), strokeWidth = 6f, cap = StrokeCap.Round)
+        }
+    }
+}

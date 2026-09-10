@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.uwc.camera.camera.CameraController
 import com.uwc.camera.camera.CameraSettings
 import com.uwc.camera.camera.CaptureMode
+import com.uwc.camera.camera.PhotoFormat
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,17 +96,48 @@ class UwcViewModel(app: Application) : AndroidViewModel(app) {
         setStatus(if (next == CaptureMode.PHOTO) "Mode PHOTO" else "Mode VIDÉO")
     }
 
-    /** Objectif suivant parmi les crans "physiques" (0,5× / 1× / 2× / 5×) disponibles sur ce téléphone. */
+    /** true si l'objectif ultra grand-angle (0,5×) est indisponible car on est en photo RAW (RAW = capteur principal). */
+    fun ultrawideBlockedByRaw(): Boolean =
+        settings.value.captureMode == CaptureMode.PHOTO && settings.value.photoFormat != PhotoFormat.JPEG
+
+    /** Crans "physiques" bornés par la pleine plage capteur (pas la plage bridée par le RAW). */
+    private fun lensStops(): List<Float> {
+        val range = controller.capabilities.value?.zoomRange ?: controller.zoomRange.value
+        return listOf(0.5f, 1f, 2f, 5f).filter { it >= range.start - 0.01f && it <= range.endInclusive + 0.01f }.ifEmpty { listOf(1f) }
+    }
+
+    private fun zoomLabelOf(z: Float) = if (z == z.toInt().toFloat()) "${z.toInt()}×" else "${z}×"
+
+    /** Applique un zoom en refusant le 0,5× quand le RAW le rend impossible (avec alerte). */
+    fun setZoom(z: Float) {
+        if (z < 1f && ultrawideBlockedByRaw()) {
+            setStatus("0,5× indisponible en RAW — passe en JPEG ou en vidéo")
+            haptics.error()
+            return
+        }
+        update { it.copy(zoomRatio = z) }
+        haptics.modeToggle()
+        setStatus("Objectif ${zoomLabelOf(z)}")
+    }
+
+    /** Objectif suivant. En RAW, le 0,5× est sauté et une alerte s'affiche une fois. */
     fun cycleLens() {
-        val range = controller.zoomRange.value
-        val stops = listOf(0.5f, 1f, 2f, 5f).filter { it >= range.start - 0.01f && it <= range.endInclusive + 0.01f }
-            .ifEmpty { listOf(1f) }
+        val stops = lensStops()
         val cur = settings.value.zoomRatio
         val idx = stops.indexOfFirst { kotlin.math.abs(it - cur) < 0.05f }
         val next = stops[(idx + 1) % stops.size]
+        if (next < 1f && ultrawideBlockedByRaw()) {
+            // Saut du 0,5× (impossible en RAW) et on garde l'alerte affichée (pas de "Objectif …" par-dessus).
+            val after = stops.filter { it >= 1f }
+            val fallback = after.firstOrNull { it > cur } ?: after.firstOrNull() ?: 1f
+            update { it.copy(zoomRatio = fallback) }
+            haptics.error()
+            setStatus("0,5× indisponible en RAW — passe en JPEG ou en vidéo")
+            return
+        }
         update { it.copy(zoomRatio = next) }
         haptics.modeToggle()
-        setStatus("Objectif ${if (next == next.toInt().toFloat()) "${next.toInt()}×" else "${next}×"}")
+        setStatus("Objectif ${zoomLabelOf(next)}")
     }
 
     fun toggleLock() {

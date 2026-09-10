@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,14 +63,25 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
     }
 
     Box(Modifier.fillMaxSize()) {
-        Surface(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(470.dp), color = PanelBg) {
+        // Zone gauche (aperçu) : un clic ferme le panneau.
+        Box(
+            Modifier.fillMaxSize().clickable(
+                interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose,
+            ),
+        )
+        Surface(
+            Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(470.dp)
+                // Absorbe les clics sur le panneau pour qu'ils ne traversent pas vers la zone de fermeture.
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {}),
+            color = PanelBg,
+        ) {
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("RÉGLAGES", Modifier.weight(1f), color = Accent, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                    TextButton(onClick = onClose) { Text("FERMER", color = Accent, fontWeight = FontWeight.Bold) }
+                    CloseButton(onClose)
                 }
 
                 Section("CAPTURE") {
@@ -86,7 +99,7 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                         Text("Objectif", color = Muted, fontSize = 13.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             zoomStops(zoomRange).forEach { z ->
-                                Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.update { it.copy(zoomRatio = z) } }
+                                Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.setZoom(z) }
                             }
                         }
                         if (raw) Hint("Le 0,5× (ultra grand-angle) ne fait pas de RAW : en RAW/RAW+JPEG l'app reste sur le capteur principal. Pour le 0,5×, passe en JPEG ou en vidéo.")
@@ -99,7 +112,7 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                         Text("Objectif", color = Muted, fontSize = 13.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             zoomStops(zoomRange).forEach { z ->
-                                Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.update { it.copy(zoomRatio = z) } }
+                                Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.setZoom(z) }
                             }
                         }
                     }
