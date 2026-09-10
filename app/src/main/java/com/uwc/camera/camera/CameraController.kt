@@ -16,6 +16,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.Range
 import android.util.Size
 import android.view.Surface
 import androidx.camera.camera2.interop.Camera2CameraControl
@@ -30,6 +31,7 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCase
 import androidx.camera.core.UseCaseGroup
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -171,29 +173,31 @@ class CameraController(private val context: Context) {
         imageCapture = null; videoCapture = null; analysis = null
 
         val rotation = previewView.display?.rotation ?: Surface.ROTATION_0
+        val photoMode = settings.captureMode == CaptureMode.PHOTO
+        // L'aperçu et le peaking suivent l'aspect du média capturé : 4:3 = plein capteur en photo,
+        // 16:9 = cadre vidéo. Pas de ViewPort → le JPEG sort en pleine résolution capteur.
+        val ratio = if (photoMode) AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
+                    else AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY
 
-        val previewBuilder = Preview.Builder().setTargetRotation(rotation)
+        val previewBuilder = Preview.Builder()
+            .setTargetRotation(rotation)
+            .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio).build())
         Camera2Interop.Extender(previewBuilder).setSessionCaptureCallback(sessionCallback)
         val preview = previewBuilder.build()
         preview.surfaceProvider = previewView.surfaceProvider
 
-        fun photoUseCase(fmt: PhotoFormat, hlgTag: Boolean): ImageCapture? {
+        fun photoUseCase(fmt: PhotoFormat): ImageCapture {
             val outFmt = when (fmt) {
                 PhotoFormat.JPEG -> ImageCapture.OUTPUT_FORMAT_JPEG
                 PhotoFormat.RAW -> ImageCapture.OUTPUT_FORMAT_RAW
                 PhotoFormat.RAW_JPEG -> ImageCapture.OUTPUT_FORMAT_RAW_JPEG
             }
-            val b = ImageCapture.Builder()
+            return ImageCapture.Builder()
                 .setTargetRotation(rotation)
                 .setOutputFormat(outFmt)
-                // Le RAW n'a rien à gagner au post-traitement "qualité" ; on privilégie la latence (sujets mobiles).
+                // Latence minimale : sujets mobiles, et le RAW ne gagne rien au pipeline "qualité".
                 .setCaptureMode(if (fmt == PhotoFormat.JPEG) ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY else ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-            // Quand la vidéo est en HLG10, CameraX exige que tous les flux le soient : on tente de déclarer
-            // la photo en HLG10 aussi (le RAW n'a pas de plage dynamique propre, le JPEG sera tone-mappé).
-            if (hlgTag) b.setDynamicRange(DynamicRange.HLG_10_BIT)
-            return runCatching { b.build() }
-                .onFailure { Log.w(TAG, "ImageCapture(hlg=$hlgTag) refusé : ${it.message}") }
-                .getOrNull()
+                .build()
         }
 
         fun videoUseCase(hlg: Boolean): Pair<VideoCapture<Recorder>, String> {
@@ -217,6 +221,7 @@ class CameraController(private val context: Context) {
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
             .setResolutionSelector(
                 ResolutionSelector.Builder()
+                    .setAspectRatioStrategy(ratio)
                     .setResolutionStrategy(ResolutionStrategy(Size(640, 480), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER))
                     .build(),
             )
@@ -226,7 +231,6 @@ class CameraController(private val context: Context) {
         fun tryBind(vararg cases: UseCase): Boolean {
             val g = UseCaseGroup.Builder()
             cases.forEach { g.addUseCase(it) }
-            previewView.viewPort?.let { g.setViewPort(it) }
             return try {
                 camera = p.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, g.build())
                 true
@@ -237,59 +241,65 @@ class CameraController(private val context: Context) {
             }
         }
 
-        val wantedFmt = c.coercePhotoFormat(settings.photoFormat)
-        val wantedHlg = settings.videoProfile == VideoProfile.HLG10 && c.supportsHlg10
         val wantPeaking = settings.peakingEnabled
+        var info: String
 
-        // Ordre de dégradation : chaque étape retire une exigence.
-        data class Attempt(val fmt: PhotoFormat, val hlg: Boolean, val photoHlg: Boolean, val peaking: Boolean)
-        val attempts = buildList {
-            if (wantedHlg) {
-                add(Attempt(wantedFmt, true, true, wantPeaking))
-                if (wantPeaking) add(Attempt(wantedFmt, true, true, false))
-                add(Attempt(wantedFmt, true, false, wantPeaking))
-                if (wantPeaking) add(Attempt(wantedFmt, true, false, false))
+        if (photoMode) {
+            val wantedFmt = c.coercePhotoFormat(settings.photoFormat)
+            // Dégradation : peaking d'abord, puis format (RAW → JPEG).
+            data class P(val fmt: PhotoFormat, val peaking: Boolean)
+            val attempts = buildList {
+                add(P(wantedFmt, wantPeaking))
+                if (wantPeaking) add(P(wantedFmt, false))
+                if (wantedFmt != PhotoFormat.JPEG) add(P(PhotoFormat.JPEG, false))
+            }.distinct()
+            var bound: P? = null
+            for (a in attempts) {
+                val ic = photoUseCase(a.fmt)
+                val an = if (a.peaking) analysisUseCase() else null
+                if (if (an != null) tryBind(preview, ic, an) else tryBind(preview, ic)) {
+                    imageCapture = ic; analysis = an; activePhotoFormat = a.fmt; bound = a; break
+                }
             }
-            add(Attempt(wantedFmt, false, false, wantPeaking))
-            if (wantPeaking) add(Attempt(wantedFmt, false, false, false))
-            if (wantedFmt != PhotoFormat.JPEG) {
-                if (wantedHlg) add(Attempt(PhotoFormat.JPEG, true, true, false))
-                add(Attempt(PhotoFormat.JPEG, false, false, false))
+            if (bound == null) { failBind(); return }
+            _peakingActive.value = bound.peaking
+            info = "PHOTO · ${bound.fmt.label}"
+            if (bound.fmt != wantedFmt) onStatus("RAW indisponible ici → JPEG")
+            else if (bound.peaking != wantPeaking) onStatus("Focus peaking indisponible")
+        } else {
+            val wantedHlg = settings.videoProfile == VideoProfile.HLG10 && c.supportsHlg10
+            data class V(val hlg: Boolean, val peaking: Boolean)
+            val attempts = buildList {
+                if (wantedHlg) { add(V(true, wantPeaking)); if (wantPeaking) add(V(true, false)) }
+                add(V(false, wantPeaking)); if (wantPeaking) add(V(false, false))
+            }.distinct()
+            var bound: V? = null; var vlabel = ""
+            for (a in attempts) {
+                val (vc, label) = videoUseCase(a.hlg)
+                val an = if (a.peaking) analysisUseCase() else null
+                if (if (an != null) tryBind(preview, vc, an) else tryBind(preview, vc)) {
+                    videoCapture = vc; analysis = an; vlabel = label; bound = a; break
+                }
             }
-        }.distinct()
+            if (bound == null) { failBind(); return }
+            _peakingActive.value = bound.peaking
+            info = "VIDÉO · $vlabel"
+            if (bound.hlg != wantedHlg) onStatus("HLG10 indisponible avec le peaking → SDR")
+            else if (bound.peaking != wantPeaking) onStatus("Focus peaking indisponible en $vlabel")
+        }
 
-        var bound: Attempt? = null
-        var videoLabel = ""
-        for (a in attempts) {
-            val ic = photoUseCase(a.fmt, a.photoHlg) ?: continue
-            val (vc, label) = videoUseCase(a.hlg)
-            val an = if (a.peaking) analysisUseCase() else null
-            val ok = if (an != null) tryBind(preview, ic, vc, an) else tryBind(preview, ic, vc)
-            if (ok) {
-                imageCapture = ic; videoCapture = vc; analysis = an
-                activePhotoFormat = a.fmt; videoLabel = label; bound = a
-                break
-            }
-        }
-        if (bound == null) {
-            onStatus("Caméra indisponible : aucune configuration acceptée")
-            _activeInfo.value = ""
-            _peakingActive.value = false
-            return
-        }
-
-        _peakingActive.value = bound.peaking
-        _activeInfo.value = "${bound.fmt.label} · $videoLabel"
-        when {
-            bound.fmt != wantedFmt -> onStatus("RAW indisponible avec la vidéo simultanée → JPEG")
-            bound.hlg != wantedHlg -> onStatus("HLG10 indisponible avec la photo simultanée → SDR")
-            bound.peaking != wantPeaking -> onStatus("Focus peaking indisponible avec cette configuration")
-        }
-        Log.i(TAG, "Session : $bound")
+        _activeInfo.value = info
+        Log.i(TAG, "Session : $info (peaking=${_peakingActive.value})")
 
         camera?.cameraInfo?.zoomState?.value?.let { _zoomRange.value = it.minZoomRatio..it.maxZoomRatio }
         lastControls?.let { (s, locked) -> applyControls(s, locked) }
             ?: camera?.cameraControl?.setZoomRatio(settings.zoomRatio.coerceIn(_zoomRange.value))
+    }
+
+    private fun failBind() {
+        onStatus("Caméra indisponible : aucune configuration acceptée")
+        _activeInfo.value = ""
+        _peakingActive.value = false
     }
 
     /** Réglages "à chaud" : focus, balance des blancs, courbe, zoom. Sans rebind. */
@@ -326,6 +336,12 @@ class CameraController(private val context: Context) {
         if (s.flatTonemap && c.tonemapContrastCurve) {
             b.setCaptureRequestOption(CaptureRequest.TONEMAP_MODE, CameraMetadata.TONEMAP_MODE_CONTRAST_CURVE)
             b.setCaptureRequestOption(CaptureRequest.TONEMAP_CURVE, FLAT_CURVE)
+        }
+
+        // Anti-flou : en photo, on force la plage FPS la plus rapide → exposition courte garantie,
+        // l'AE compense en montant les ISO. En vidéo la cadence est déjà fixée par l'encodeur.
+        if (s.antiBlur && s.captureMode == CaptureMode.PHOTO) {
+            c.antiBlurFps?.let { b.setCaptureRequestOption(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, it) }
         }
 
         Camera2CameraControl.from(cam.cameraControl).setCaptureRequestOptions(b.build())

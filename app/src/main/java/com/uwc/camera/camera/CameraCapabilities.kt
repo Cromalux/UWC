@@ -6,6 +6,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.os.Build
+import android.util.Range
 import android.util.Size
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.core.CameraInfo
@@ -28,6 +29,8 @@ class CameraCapabilities(
     val stabilizationSupported: Boolean,
     val tonemapContrastCurve: Boolean,
     val minFocusDiopters: Float,
+    /** Meilleure plage FPS fixe pour l'anti-flou (obturation courte garantie), si dispo. */
+    val antiBlurFps: Range<Int>?,
     val zoomRange: ClosedFloatingPointRange<Float>,
     val physicalCameraIds: Set<String>,
     val rawSizes: List<Size>,
@@ -62,6 +65,7 @@ class CameraCapabilities(
         appendLine("OPTIQUE")
         appendLine("  Focus manuel : ${if (hasManualFocus) "oui (min ${UnderwaterOptics.label(minFocusDiopters)} réel, $minFocusDiopters dpt)" else "non"}")
         appendLine("  Zoom : ${"%.1f".format(zoomRange.start)}× – ${"%.1f".format(zoomRange.endInclusive)}×")
+        appendLine("  Anti-flou (plage FPS) : ${antiBlurFps?.let { "${it.lower}–${it.upper}" } ?: "—"}")
     }
 
     companion object {
@@ -90,6 +94,12 @@ class CameraCapabilities(
 
             val tonemapModes = c2.getCameraCharacteristic(CameraCharacteristics.TONEMAP_AVAILABLE_TONE_MAP_MODES) ?: intArrayOf()
             val minFocus = c2.getCameraCharacteristic(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+            val fpsRanges = c2.getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)?.toList() ?: emptyList()
+            // Anti-flou : la plage dont la borne basse est la plus haute borne la durée d'exposition
+            // (fps mini élevé ⇒ exposition ≤ 1/fps). À borne basse égale, on préfère la plage la plus serrée.
+            val antiBlur = fpsRanges
+                .filter { it.lower >= 30 }
+                .maxWithOrNull(compareBy({ it.lower }, { -(it.upper - it.lower) }))
             val zoom = info.zoomState.value?.let { it.minZoomRatio..it.maxZoomRatio } ?: (1f..1f)
 
             val physical: Set<String> = runCatching {
@@ -109,6 +119,7 @@ class CameraCapabilities(
                 stabilizationSupported = vc.isStabilizationSupported,
                 tonemapContrastCurve = CameraMetadata.TONEMAP_MODE_CONTRAST_CURVE in tonemapModes,
                 minFocusDiopters = minFocus,
+                antiBlurFps = antiBlur,
                 zoomRange = zoom,
                 physicalCameraIds = physical,
                 rawSizes = raw,

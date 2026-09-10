@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         keys = VolumeKeyHandler(lifecycleScope, object : VolumeKeyHandler.Callbacks {
             override fun onPhoto() = vm.takePhoto()
             override fun onVideoToggle() = vm.toggleVideo()
-            override fun onCycleLens() = vm.cycleLens()
+            override fun onSwitchMode() = vm.toggleMode()
             override fun onLockProgress(progress: Float) = vm.setUnlockProgress(progress)
             override fun onLockToggle() = vm.toggleLock()
         })

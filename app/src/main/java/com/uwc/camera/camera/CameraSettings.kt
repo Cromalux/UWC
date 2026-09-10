@@ -1,5 +1,7 @@
 package com.uwc.camera.camera
 
+enum class CaptureMode(val label: String) { PHOTO("PHOTO"), VIDEO("VIDÉO") }
+
 enum class PhotoFormat(val label: String) { JPEG("JPEG"), RAW("RAW"), RAW_JPEG("RAW+JPEG") }
 
 enum class VideoProfile(val label: String) { SDR("SDR 8 bits"), HLG10("HLG10 · Log") }
@@ -18,22 +20,25 @@ enum class ScreenMode(val label: String) { MAX("Max"), SYSTEM("Système") }
 
 /**
  * Tous les réglages utilisateur. Persistés via [com.uwc.camera.SettingsStore].
- * Photo et vidéo sont armées en permanence (Vol+ = photo, Vol− = vidéo) : il n'y a pas de "mode".
- * Les champs "structurels" (format, profil, peaking on/off) déclenchent un rebind
+ * Deux modes exclusifs (PHOTO / VIDÉO) pour garder la pleine qualité de chacun.
+ * Les champs "structurels" (mode, format, profil, peaking on/off) déclenchent un rebind
  * CameraX ; les autres sont appliqués à chaud via Camera2CameraControl.
  */
 data class CameraSettings(
+    val captureMode: CaptureMode = CaptureMode.PHOTO,
     val photoFormat: PhotoFormat = PhotoFormat.RAW_JPEG,
     val videoProfile: VideoProfile = VideoProfile.HLG10,
     val flatTonemap: Boolean = false,
     val recordAudio: Boolean = false,
     val stabilization: Boolean = true,
+    /** Force une vitesse d'obturation courte (via plage FPS haute) pour tuer le flou de bougé. */
+    val antiBlur: Boolean = true,
 
     val peakingEnabled: Boolean = true,
     val peakingThreshold: Int = 40,
     val peakingColor: Int = 0xFFFF3B30.toInt(),
 
-    val focusMode: FocusMode = FocusMode.CONTINUOUS,
+    val focusMode: FocusMode = FocusMode.LOCK_ON_LOCK,
     /** Dioptries (1/m) pour le mode MANUAL. 0 = infini. Borné par LENS_INFO_MINIMUM_FOCUS_DISTANCE. */
     val focusDiopters: Float = 1.33f,
 
@@ -53,13 +58,14 @@ data class CameraSettings(
 
 /** Sous-ensemble des réglages qui impose de reconstruire la session caméra. */
 data class BindConfig(
+    val captureMode: CaptureMode,
     val photoFormat: PhotoFormat,
     val videoProfile: VideoProfile,
     val peaking: Boolean,
     val stabilization: Boolean,
 ) {
     companion object {
-        fun from(s: CameraSettings) = BindConfig(s.photoFormat, s.videoProfile, s.peakingEnabled, s.stabilization)
+        fun from(s: CameraSettings) = BindConfig(s.captureMode, s.photoFormat, s.videoProfile, s.peakingEnabled, s.stabilization)
     }
 }
 

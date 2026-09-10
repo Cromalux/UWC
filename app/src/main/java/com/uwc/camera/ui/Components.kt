@@ -273,3 +273,21 @@ fun GearGlyph(modifier: Modifier = Modifier, color: Color = Color.White) {
         }
     }
 }
+
+/** Bascule PHOTO / VIDÉO : deux demi-pastilles, la moitié active en ambre. */
+@Composable
+fun ModeToggle(mode: com.uwc.camera.camera.CaptureMode, onToggle: () -> Unit) {
+    Surface(color = PanelBg, shape = RoundedCornerShape(20.dp), modifier = Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onToggle)) {
+        Row {
+            com.uwc.camera.camera.CaptureMode.entries.forEach { m ->
+                val on = m == mode
+                Text(
+                    m.label,
+                    Modifier.background(if (on) Accent else Color.Transparent, RoundedCornerShape(20.dp)).padding(horizontal = 18.dp, vertical = 8.dp),
+                    color = if (on) Color.Black else Color.White,
+                    fontSize = 16.sp, fontWeight = FontWeight.ExtraBold,
+                )
+            }
+        }
+    }
+}

@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.uwc.camera.camera.CameraController
 import com.uwc.camera.camera.CameraSettings
+import com.uwc.camera.camera.CaptureMode
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,6 +72,7 @@ class UwcViewModel(app: Application) : AndroidViewModel(app) {
 
     fun takePhoto() {
         if (!_ready.value) return
+        if (settings.value.captureMode != CaptureMode.PHOTO) { toggleMode(); return }
         if (controller.takePhoto()) {
             _shotCount.update { it + 1 }
             _flashAt.value = SystemClock.uptimeMillis()
@@ -80,8 +82,17 @@ class UwcViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleVideo() {
         if (!_ready.value) return
+        if (settings.value.captureMode != CaptureMode.VIDEO) { toggleMode(); return }
         controller.toggleRecording(settings.value.recordAudio)
         haptics.recordToggle()
+    }
+
+    fun toggleMode() {
+        if (controller.isRecording.value) { setStatus("Enregistrement en cours"); haptics.error(); return }
+        val next = if (settings.value.captureMode == CaptureMode.PHOTO) CaptureMode.VIDEO else CaptureMode.PHOTO
+        update { it.copy(captureMode = next) }
+        haptics.modeToggle()
+        setStatus(if (next == CaptureMode.PHOTO) "Mode PHOTO" else "Mode VIDÉO")
     }
 
     /** Objectif suivant parmi les crans "physiques" (0,5× / 1× / 2× / 5×) disponibles sur ce téléphone. */

@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
  *  - Vol+ court                 → photo
  *  - Vol+ maintenu [LOCK_MS]    → verrouiller / déverrouiller (barre de progression pendant l'appui)
  *  - Vol− court                 → démarrer / arrêter la vidéo
- *  - Vol− maintenu [LONG_MS]    → objectif suivant (0,5× → 1× → 2× → 5×)
+ *  - Vol− maintenu [LONG_MS]    → bascule PHOTO ⇄ VIDÉO
  *
  * Toutes les touches volume sont consommées (pas de HUD volume système).
  */
@@ -23,7 +23,7 @@ class VolumeKeyHandler(
     interface Callbacks {
         fun onPhoto()
         fun onVideoToggle()
-        fun onCycleLens()
+        fun onSwitchMode()
         /** 0f..1f pendant l'appui long sur Vol+ ; 0f quand il est relâché avant terme. */
         fun onLockProgress(progress: Float)
         fun onLockToggle()
@@ -69,7 +69,7 @@ class VolumeKeyHandler(
                 delay(LONG_MS)
                 downFired = true
                 downJob = null
-                callbacks.onCycleLens()
+                callbacks.onSwitchMode()
             }
         }
         return true

@@ -24,6 +24,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,6 +39,7 @@ import com.uwc.camera.UwcViewModel
 import com.uwc.camera.camera.CameraSettings
 import com.uwc.camera.camera.FocusMode
 import com.uwc.camera.camera.PeakingColors
+import com.uwc.camera.camera.CaptureMode
 import com.uwc.camera.camera.PhotoFormat
 import com.uwc.camera.camera.VideoProfile
 import com.uwc.camera.camera.ScreenMode
@@ -65,22 +72,41 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                 }
 
                 Section("CAPTURE") {
-                    Text("Photo (Vol+)", color = Muted, fontSize = 13.sp)
-                    ChipRow(PhotoFormat.entries, s.photoFormat, label = { it.label },
-                        enabled = { f -> !isRecording && (caps?.let { c -> c.coercePhotoFormat(f) == f } ?: true) }) { f ->
-                        vm.update { it.copy(photoFormat = f) }
+                    Text("Mode (Vol− long pour basculer)", color = Muted, fontSize = 13.sp)
+                    ChipRow(CaptureMode.entries, s.captureMode, label = { it.label }, enabled = { !isRecording }) { m ->
+                        if (!isRecording) vm.update { it.copy(captureMode = m) }
                     }
-                    Text("Vidéo (Vol−)", color = Muted, fontSize = 13.sp)
-                    ChipRow(VideoProfile.entries, s.videoProfile, label = { it.label },
-                        enabled = { p -> !isRecording && (p == VideoProfile.SDR || (caps?.supportsHlg10 ?: true)) }) { p ->
-                        vm.update { it.copy(videoProfile = p) }
-                    }
-                    Text("Objectif (Vol− long ou pastille de zoom)", color = Muted, fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        zoomStops(zoomRange).forEach { z ->
-                            Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.update { it.copy(zoomRatio = z) } }
+                    if (s.captureMode == CaptureMode.PHOTO) {
+                        Text("Format photo", color = Muted, fontSize = 13.sp)
+                        ChipRow(PhotoFormat.entries, s.photoFormat, label = { it.label },
+                            enabled = { f -> caps?.let { c -> c.coercePhotoFormat(f) == f } ?: true }) { f ->
+                            vm.update { it.copy(photoFormat = f) }
+                        }
+                        val raw = s.photoFormat != PhotoFormat.JPEG
+                        Text("Objectif", color = Muted, fontSize = 13.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            zoomStops(zoomRange).forEach { z ->
+                                Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.update { it.copy(zoomRatio = z) } }
+                            }
+                        }
+                        if (raw) Hint("Le 0,5× (ultra grand-angle) ne fait pas de RAW : en RAW/RAW+JPEG l'app reste sur le capteur principal. Pour le 0,5×, passe en JPEG ou en vidéo.")
+                    } else {
+                        Text("Profil vidéo", color = Muted, fontSize = 13.sp)
+                        ChipRow(VideoProfile.entries, s.videoProfile, label = { it.label },
+                            enabled = { p -> !isRecording && (p == VideoProfile.SDR || (caps?.supportsHlg10 ?: true)) }) { p ->
+                            vm.update { it.copy(videoProfile = p) }
+                        }
+                        Text("Objectif", color = Muted, fontSize = 13.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            zoomStops(zoomRange).forEach { z ->
+                                Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.update { it.copy(zoomRatio = z) } }
+                            }
                         }
                     }
+                    SwitchRow("Anti-flou (vitesse rapide, ISO auto)", s.antiBlur, enabled = caps?.antiBlurFps != null) {
+                        vm.update { it.copy(antiBlur = !it.antiBlur) }
+                    }
+                    Hint("Anti-flou : force une obturation courte pour figer le mouvement (utile en photo). Monte les ISO en basse lumière.")
                 }
 
                 Section("FOCUS PEAKING") {
@@ -159,9 +185,25 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                     Hint("Désactivé, le volume ne sert qu'une fois verrouillé — mais alors le verrouillage lui-même doit se faire par Vol+ long… donc laisse-le activé.")
                 }
 
+                Section("LANCEMENT DANS LA POCHETTE") {
+                    val svcOn = remember(s) { launchServiceEnabled(ctx) }
+                    Hint(if (svcOn) "Actif : triple appui rapide sur Volume + ouvre UWC depuis n'importe où (écran allumé)."
+                         else "Active le service pour ouvrir UWC par triple appui sur Volume +, téléphone déjà dans la pochette.")
+                    OutlinedButton(onClick = {
+                        ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }, Modifier.fillMaxWidth()) { Text(if (svcOn) "GÉRER (ACCESSIBILITÉ)" else "ACTIVER LE TRIPLE-CLIC", fontWeight = FontWeight.Bold) }
+                    Hint("Ouvre Accessibilité › Applications installées › UWG — lancement triple-clic. UWC n'utilise l'accessibilité que pour détecter ce raccourci.")
+                }
+
                 OutlinedButton(onClick = onHelp, Modifier.fillMaxWidth()) { Text("AIDE DES BOUTONS", fontWeight = FontWeight.Bold) }
                 OutlinedButton(onClick = onDiagnostics, Modifier.fillMaxWidth()) { Text("DIAGNOSTIC CAMÉRA", fontWeight = FontWeight.Bold) }
             }
         }
     }
+}
+
+/** Vrai si le service d'accessibilité de lancement est activé pour cette app. */
+private fun launchServiceEnabled(ctx: android.content.Context): Boolean {
+    val flat = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+    return flat.split(':').any { it.substringBefore('/').equals(ctx.packageName, ignoreCase = true) }
 }

@@ -85,7 +85,7 @@ private fun CameraPreview(vm: UwcViewModel, settings: CameraSettings, ready: Boo
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 PreviewView(ctx).apply {
-                    scaleType = PreviewView.ScaleType.FILL_CENTER
+                    scaleType = PreviewView.ScaleType.FIT_CENTER
                     doOnLayout { laidOut = true }
                     view = this
                 }

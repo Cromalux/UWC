@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.uwc.camera.UwcViewModel
 import com.uwc.camera.camera.CameraSettings
+import com.uwc.camera.camera.CaptureMode
 import com.uwc.camera.camera.WhiteBalance
 import java.util.Locale
 
@@ -38,6 +39,8 @@ fun ControlsOverlay(vm: UwcViewModel, settings: CameraSettings, onOpenSettings: 
             if (settings.peakingEnabled && !peakingActive && activeInfo.isNotEmpty()) InfoBadge("peaking indisponible", muted = true)
             if (shotCount > 0) InfoBadge("$shotCount photo${if (shotCount > 1) "s" else ""}", muted = true)
         }
+
+        Box(Modifier.align(Alignment.TopCenter)) { ModeToggle(settings.captureMode) { vm.toggleMode() } }
 
         Box(Modifier.align(Alignment.TopEnd)) { GearButton(onClick = onOpenSettings) }
 

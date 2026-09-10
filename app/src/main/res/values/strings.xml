@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">UWC</string>
+    <string name="accessibility_launch_label">UWC — lancement triple-clic</string>
+    <string name="accessibility_launch_desc">Autorise UWC à détecter un triple appui rapide sur Volume + pour ouvrir l\'appareil photo, même téléphone dans la pochette. UWC n\'utilise l\'accessibilité que pour ça et ne lit aucun contenu à l\'écran.</string>
 </resources>

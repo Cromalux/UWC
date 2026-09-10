@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.uwc.camera.camera.CameraSettings
 import com.uwc.camera.camera.FocusMode
+import com.uwc.camera.camera.CaptureMode
 import com.uwc.camera.camera.PhotoFormat
 import com.uwc.camera.camera.ScreenMode
 import com.uwc.camera.camera.VideoProfile
@@ -21,11 +22,13 @@ private val Context.dataStore by preferencesDataStore(name = "uwc_settings")
 class SettingsStore(private val context: Context) {
 
     private object K {
+        val captureMode = stringPreferencesKey("captureMode")
         val photoFormat = stringPreferencesKey("photoFormat")
         val videoProfile = stringPreferencesKey("videoProfile")
         val flatTonemap = booleanPreferencesKey("flatTonemap")
         val recordAudio = booleanPreferencesKey("recordAudio")
         val stabilization = booleanPreferencesKey("stabilization")
+        val antiBlur = booleanPreferencesKey("antiBlur")
         val peakingEnabled = booleanPreferencesKey("peakingEnabled")
         val peakingThreshold = intPreferencesKey("peakingThreshold")
         val peakingColor = intPreferencesKey("peakingColor")
@@ -46,11 +49,13 @@ class SettingsStore(private val context: Context) {
         val p = context.dataStore.data.first()
         val d = CameraSettings()
         return CameraSettings(
+            captureMode = enumOr(p[K.captureMode], d.captureMode),
             photoFormat = enumOr(p[K.photoFormat], d.photoFormat),
             videoProfile = enumOr(p[K.videoProfile], d.videoProfile),
             flatTonemap = p[K.flatTonemap] ?: d.flatTonemap,
             recordAudio = p[K.recordAudio] ?: d.recordAudio,
             stabilization = p[K.stabilization] ?: d.stabilization,
+            antiBlur = p[K.antiBlur] ?: d.antiBlur,
             peakingEnabled = p[K.peakingEnabled] ?: d.peakingEnabled,
             peakingThreshold = p[K.peakingThreshold] ?: d.peakingThreshold,
             peakingColor = p[K.peakingColor] ?: d.peakingColor,
@@ -70,11 +75,13 @@ class SettingsStore(private val context: Context) {
 
     suspend fun save(s: CameraSettings) {
         context.dataStore.edit { p ->
+            p[K.captureMode] = s.captureMode.name
             p[K.photoFormat] = s.photoFormat.name
             p[K.videoProfile] = s.videoProfile.name
             p[K.flatTonemap] = s.flatTonemap
             p[K.recordAudio] = s.recordAudio
             p[K.stabilization] = s.stabilization
+            p[K.antiBlur] = s.antiBlur
             p[K.peakingEnabled] = s.peakingEnabled
             p[K.peakingThreshold] = s.peakingThreshold
             p[K.peakingColor] = s.peakingColor
