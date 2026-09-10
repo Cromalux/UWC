@@ -55,8 +55,8 @@ fun CameraScreen(vm: UwcViewModel) {
                 LockedHud(vm, settings)
             } else {
                 ControlsOverlay(vm, settings, onOpenSettings = { showSettings = true })
-                if (isRecording) Box(Modifier.align(Alignment.TopCenter).padding(top = 16.dp)) { RecPill(recMs) }
                 if (showSettings) SettingsSheet(vm, settings, onClose = { showSettings = false }, onDiagnostics = { showDiag = true }, onHelp = { showHelp = true })
+                if (isRecording) Box(Modifier.align(Alignment.TopCenter).padding(top = 16.dp)) { RecPill(recMs) }
             }
             if (isRecording) RecordingFrame()
             if (progress > 0f) Box(Modifier.align(Alignment.Center)) { LockProgress(progress, locking = !locked) }

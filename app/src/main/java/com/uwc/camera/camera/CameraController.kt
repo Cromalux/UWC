@@ -177,18 +177,23 @@ class CameraController(private val context: Context) {
         val preview = previewBuilder.build()
         preview.surfaceProvider = previewView.surfaceProvider
 
-        fun photoUseCase(fmt: PhotoFormat): ImageCapture {
+        fun photoUseCase(fmt: PhotoFormat, hlgTag: Boolean): ImageCapture? {
             val outFmt = when (fmt) {
                 PhotoFormat.JPEG -> ImageCapture.OUTPUT_FORMAT_JPEG
                 PhotoFormat.RAW -> ImageCapture.OUTPUT_FORMAT_RAW
                 PhotoFormat.RAW_JPEG -> ImageCapture.OUTPUT_FORMAT_RAW_JPEG
             }
-            return ImageCapture.Builder()
+            val b = ImageCapture.Builder()
                 .setTargetRotation(rotation)
                 .setOutputFormat(outFmt)
                 // Le RAW n'a rien à gagner au post-traitement "qualité" ; on privilégie la latence (sujets mobiles).
                 .setCaptureMode(if (fmt == PhotoFormat.JPEG) ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY else ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .build()
+            // Quand la vidéo est en HLG10, CameraX exige que tous les flux le soient : on tente de déclarer
+            // la photo en HLG10 aussi (le RAW n'a pas de plage dynamique propre, le JPEG sera tone-mappé).
+            if (hlgTag) b.setDynamicRange(DynamicRange.HLG_10_BIT)
+            return runCatching { b.build() }
+                .onFailure { Log.w(TAG, "ImageCapture(hlg=$hlgTag) refusé : ${it.message}") }
+                .getOrNull()
         }
 
         fun videoUseCase(hlg: Boolean): Pair<VideoCapture<Recorder>, String> {
@@ -237,18 +242,26 @@ class CameraController(private val context: Context) {
         val wantPeaking = settings.peakingEnabled
 
         // Ordre de dégradation : chaque étape retire une exigence.
-        data class Attempt(val fmt: PhotoFormat, val hlg: Boolean, val peaking: Boolean)
+        data class Attempt(val fmt: PhotoFormat, val hlg: Boolean, val photoHlg: Boolean, val peaking: Boolean)
         val attempts = buildList {
-            add(Attempt(wantedFmt, wantedHlg, wantPeaking))
-            if (wantPeaking) add(Attempt(wantedFmt, wantedHlg, false))
-            if (wantedHlg) { add(Attempt(wantedFmt, false, wantPeaking)); if (wantPeaking) add(Attempt(wantedFmt, false, false)) }
-            if (wantedFmt != PhotoFormat.JPEG) { add(Attempt(PhotoFormat.JPEG, wantedHlg, false)); add(Attempt(PhotoFormat.JPEG, false, false)) }
+            if (wantedHlg) {
+                add(Attempt(wantedFmt, true, true, wantPeaking))
+                if (wantPeaking) add(Attempt(wantedFmt, true, true, false))
+                add(Attempt(wantedFmt, true, false, wantPeaking))
+                if (wantPeaking) add(Attempt(wantedFmt, true, false, false))
+            }
+            add(Attempt(wantedFmt, false, false, wantPeaking))
+            if (wantPeaking) add(Attempt(wantedFmt, false, false, false))
+            if (wantedFmt != PhotoFormat.JPEG) {
+                if (wantedHlg) add(Attempt(PhotoFormat.JPEG, true, true, false))
+                add(Attempt(PhotoFormat.JPEG, false, false, false))
+            }
         }.distinct()
 
         var bound: Attempt? = null
         var videoLabel = ""
         for (a in attempts) {
-            val ic = photoUseCase(a.fmt)
+            val ic = photoUseCase(a.fmt, a.photoHlg) ?: continue
             val (vc, label) = videoUseCase(a.hlg)
             val an = if (a.peaking) analysisUseCase() else null
             val ok = if (an != null) tryBind(preview, ic, vc, an) else tryBind(preview, ic, vc)
