@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,10 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -42,7 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -201,7 +203,7 @@ fun GearButton(onClick: () -> Unit) {
         Modifier.size(64.dp).clip(CircleShape).background(PanelBg).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Filled.Settings, contentDescription = "Réglages", tint = Color.White, modifier = Modifier.size(34.dp))
+        GearGlyph(Modifier.size(34.dp))
     }
 }
 
@@ -254,5 +256,20 @@ fun LockProgress(progress: Float, locking: Boolean) {
 fun BottomLabel(text: String) {
     Surface(color = PanelBg, shape = RoundedCornerShape(10.dp)) {
         Text(text, Modifier.padding(horizontal = 14.dp, vertical = 8.dp), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+    }
+}
+
+/** Roue crantée dessinée à la main : un anneau épais et huit dents. */
+@Composable
+fun GearGlyph(modifier: Modifier = Modifier, color: Color = Color.White) {
+    Canvas(modifier) {
+        val r = size.minDimension / 2f
+        val ring = r * 0.28f
+        drawCircle(color, radius = r * 0.55f, center = center, style = Stroke(width = ring))
+        repeat(8) { i ->
+            rotate(i * 45f, pivot = center) {
+                drawLine(color, Offset(center.x, center.y - r * 0.62f), Offset(center.x, center.y - r * 0.98f), strokeWidth = ring * 0.95f, cap = StrokeCap.Butt)
+            }
+        }
     }
 }
