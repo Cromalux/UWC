@@ -21,7 +21,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -34,13 +41,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.uwc.camera.camera.CameraCapabilities
 import com.uwc.camera.camera.CameraSettings
-import com.uwc.camera.camera.CaptureMode
 import com.uwc.camera.camera.FocusMode
 import com.uwc.camera.camera.UnderwaterOptics
 import java.util.Locale
@@ -124,18 +131,6 @@ fun <T> ChipRow(items: List<T>, selected: T, label: (T) -> String, enabled: (T) 
 }
 
 @Composable
-fun ShutterButton(mode: CaptureMode, recording: Boolean, onClick: () -> Unit) {
-    val ring = if (mode == CaptureMode.VIDEO) Danger else Color.White
-    Box(
-        Modifier.size(88.dp).clip(CircleShape).border(5.dp, ring, CircleShape).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (recording) Box(Modifier.size(34.dp).background(Danger, RoundedCornerShape(6.dp)))
-        else Box(Modifier.size(68.dp).background(ring, CircleShape))
-    }
-}
-
-@Composable
 fun BigButton(text: String, color: Color = Accent, onClick: () -> Unit) {
     Button(
         onClick = onClick,
@@ -195,4 +190,69 @@ fun ColorDot(argb: Int, selected: Boolean, onClick: () -> Unit) {
 @Composable
 fun Hint(text: String) {
     Text(text, color = Muted, fontSize = 13.sp, lineHeight = 17.sp)
+}
+
+/* ---------- HUD minimal (inspiré de l'app de référence) ---------- */
+
+/** La seule commande tactile de l'écran principal : la roue crantée des réglages. */
+@Composable
+fun GearButton(onClick: () -> Unit) {
+    Box(
+        Modifier.size(64.dp).clip(CircleShape).background(PanelBg).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Filled.Settings, contentDescription = "Réglages", tint = Color.White, modifier = Modifier.size(34.dp))
+    }
+}
+
+/** Pastille cliquable de zoom, en bas au centre — un tap passe à l'objectif suivant. */
+@Composable
+fun ZoomPill(zoom: Float, onClick: () -> Unit) {
+    Surface(color = PanelBg, shape = RoundedCornerShape(20.dp), modifier = Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick)) {
+        Text(zoomLabel(zoom), Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Gros chrono rouge, lisible même en eau trouble. */
+@Composable
+fun RecPill(ms: Long) {
+    val blink by rememberInfiniteTransition(label = "recPill").animateFloat(
+        initialValue = 1f, targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "recPillBlink",
+    )
+    Surface(color = Danger, shape = RoundedCornerShape(12.dp)) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(14.dp).background(Color.White.copy(alpha = blink), CircleShape))
+            Spacer(Modifier.width(10.dp))
+            Text(formatDuration(ms), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+        }
+    }
+}
+
+/** Cadre rouge sur tout l'écran pendant l'enregistrement. */
+@Composable
+fun RecordingFrame() {
+    Box(Modifier.fillMaxSize().border(5.dp, Danger))
+}
+
+/** Barre de progression de l'appui long sur Vol+ (verrouillage / déverrouillage). */
+@Composable
+fun LockProgress(progress: Float, locking: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(if (locking) "Verrouillage…" else "Déverrouillage…", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(10.dp))
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.width(320.dp).height(14.dp),
+            color = Accent,
+            trackColor = Color(0x66000000),
+        )
+    }
+}
+
+@Composable
+fun BottomLabel(text: String) {
+    Surface(color = PanelBg, shape = RoundedCornerShape(10.dp)) {
+        Text(text, Modifier.padding(horizontal = 14.dp, vertical = 8.dp), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+    }
 }

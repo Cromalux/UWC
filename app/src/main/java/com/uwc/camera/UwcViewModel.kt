@@ -6,7 +6,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.uwc.camera.camera.CameraController
 import com.uwc.camera.camera.CameraSettings
-import com.uwc.camera.camera.CaptureMode
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -70,29 +69,32 @@ class UwcViewModel(app: Application) : AndroidViewModel(app) {
 
     fun update(transform: (CameraSettings) -> CameraSettings) = _settings.update(transform)
 
-    fun shutter() {
+    fun takePhoto() {
         if (!_ready.value) return
-        when (settings.value.mode) {
-            CaptureMode.PHOTO -> if (controller.takePhoto()) {
-                _shotCount.update { it + 1 }
-                _flashAt.value = SystemClock.uptimeMillis()
-                haptics.shutter()
-            }
-            CaptureMode.VIDEO -> {
-                controller.toggleRecording(settings.value.recordAudio)
-                haptics.recordToggle()
-            }
+        if (controller.takePhoto()) {
+            _shotCount.update { it + 1 }
+            _flashAt.value = SystemClock.uptimeMillis()
+            haptics.shutter()
         }
     }
 
-    fun toggleMode() {
-        if (controller.isRecording.value) {
-            setStatus("Enregistrement en cours")
-            haptics.error()
-            return
-        }
-        update { it.copy(mode = if (it.mode == CaptureMode.PHOTO) CaptureMode.VIDEO else CaptureMode.PHOTO) }
+    fun toggleVideo() {
+        if (!_ready.value) return
+        controller.toggleRecording(settings.value.recordAudio)
+        haptics.recordToggle()
+    }
+
+    /** Objectif suivant parmi les crans "physiques" (0,5× / 1× / 2× / 5×) disponibles sur ce téléphone. */
+    fun cycleLens() {
+        val range = controller.zoomRange.value
+        val stops = listOf(0.5f, 1f, 2f, 5f).filter { it >= range.start - 0.01f && it <= range.endInclusive + 0.01f }
+            .ifEmpty { listOf(1f) }
+        val cur = settings.value.zoomRatio
+        val idx = stops.indexOfFirst { kotlin.math.abs(it - cur) < 0.05f }
+        val next = stops[(idx + 1) % stops.size]
+        update { it.copy(zoomRatio = next) }
         haptics.modeToggle()
+        setStatus("Objectif ${if (next == next.toInt().toFloat()) "${next.toInt()}×" else "${next}×"}")
     }
 
     fun toggleLock() {
@@ -101,11 +103,7 @@ class UwcViewModel(app: Application) : AndroidViewModel(app) {
         _unlockProgress.value = 0f
         _blackout.value = now && settings.value.blackoutWhenLocked
         haptics.lockToggle()
-        setStatus(if (now) "Verrouillé — Vol+ & Vol− 2,5 s pour déverrouiller" else "Déverrouillé")
-    }
-
-    fun toggleBlackout() {
-        if (_locked.value) _blackout.update { !it }
+        setStatus(if (now) "Verrouillé — Vol+ maintenu 1,5 s pour déverrouiller" else "Déverrouillé")
     }
 
     fun setUnlockProgress(p: Float) { _unlockProgress.value = p }

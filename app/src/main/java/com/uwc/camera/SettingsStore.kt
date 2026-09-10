@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.uwc.camera.camera.CameraSettings
-import com.uwc.camera.camera.CaptureMode
 import com.uwc.camera.camera.FocusMode
 import com.uwc.camera.camera.PhotoFormat
 import com.uwc.camera.camera.ScreenMode
@@ -22,7 +21,6 @@ private val Context.dataStore by preferencesDataStore(name = "uwc_settings")
 class SettingsStore(private val context: Context) {
 
     private object K {
-        val mode = stringPreferencesKey("mode")
         val photoFormat = stringPreferencesKey("photoFormat")
         val videoProfile = stringPreferencesKey("videoProfile")
         val flatTonemap = booleanPreferencesKey("flatTonemap")
@@ -41,13 +39,13 @@ class SettingsStore(private val context: Context) {
         val blackoutWhenLocked = booleanPreferencesKey("blackoutWhenLocked")
         val usePinning = booleanPreferencesKey("usePinning")
         val volumeShutterWhenUnlocked = booleanPreferencesKey("volumeShutterWhenUnlocked")
+        val onboardingDone = booleanPreferencesKey("onboardingDone")
     }
 
     suspend fun load(): CameraSettings {
         val p = context.dataStore.data.first()
         val d = CameraSettings()
         return CameraSettings(
-            mode = enumOr(p[K.mode], d.mode),
             photoFormat = enumOr(p[K.photoFormat], d.photoFormat),
             videoProfile = enumOr(p[K.videoProfile], d.videoProfile),
             flatTonemap = p[K.flatTonemap] ?: d.flatTonemap,
@@ -66,12 +64,12 @@ class SettingsStore(private val context: Context) {
             blackoutWhenLocked = p[K.blackoutWhenLocked] ?: d.blackoutWhenLocked,
             usePinning = p[K.usePinning] ?: d.usePinning,
             volumeShutterWhenUnlocked = p[K.volumeShutterWhenUnlocked] ?: d.volumeShutterWhenUnlocked,
+            onboardingDone = p[K.onboardingDone] ?: d.onboardingDone,
         )
     }
 
     suspend fun save(s: CameraSettings) {
         context.dataStore.edit { p ->
-            p[K.mode] = s.mode.name
             p[K.photoFormat] = s.photoFormat.name
             p[K.videoProfile] = s.videoProfile.name
             p[K.flatTonemap] = s.flatTonemap
@@ -90,6 +88,7 @@ class SettingsStore(private val context: Context) {
             p[K.blackoutWhenLocked] = s.blackoutWhenLocked
             p[K.usePinning] = s.usePinning
             p[K.volumeShutterWhenUnlocked] = s.volumeShutterWhenUnlocked
+            p[K.onboardingDone] = s.onboardingDone
         }
     }
 

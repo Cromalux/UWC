@@ -33,6 +33,8 @@ import com.uwc.camera.UwcViewModel
 import com.uwc.camera.camera.CameraSettings
 import com.uwc.camera.camera.FocusMode
 import com.uwc.camera.camera.PeakingColors
+import com.uwc.camera.camera.PhotoFormat
+import com.uwc.camera.camera.VideoProfile
 import com.uwc.camera.camera.ScreenMode
 import com.uwc.camera.camera.UnderwaterOptics
 import com.uwc.camera.camera.WhiteBalance
@@ -41,8 +43,10 @@ import kotlin.math.roundToInt
 
 /** Panneau latéral de réglages — uniquement accessible déverrouillé. */
 @Composable
-fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDiagnostics: () -> Unit) {
+fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDiagnostics: () -> Unit, onHelp: () -> Unit) {
     val caps by vm.controller.capabilities.collectAsState()
+    val zoomRange by vm.controller.zoomRange.collectAsState()
+    val isRecording by vm.controller.isRecording.collectAsState()
     val ctx = LocalContext.current
     val audioLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.update { it.copy(recordAudio = granted) }
@@ -58,6 +62,25 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("RÉGLAGES", Modifier.weight(1f), color = Accent, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
                     TextButton(onClick = onClose) { Text("FERMER", color = Accent, fontWeight = FontWeight.Bold) }
+                }
+
+                Section("CAPTURE") {
+                    Text("Photo (Vol+)", color = Muted, fontSize = 13.sp)
+                    ChipRow(PhotoFormat.entries, s.photoFormat, label = { it.label },
+                        enabled = { f -> !isRecording && (caps?.let { c -> c.coercePhotoFormat(f) == f } ?: true) }) { f ->
+                        vm.update { it.copy(photoFormat = f) }
+                    }
+                    Text("Vidéo (Vol−)", color = Muted, fontSize = 13.sp)
+                    ChipRow(VideoProfile.entries, s.videoProfile, label = { it.label },
+                        enabled = { p -> !isRecording && (p == VideoProfile.SDR || (caps?.supportsHlg10 ?: true)) }) { p ->
+                        vm.update { it.copy(videoProfile = p) }
+                    }
+                    Text("Objectif (Vol− long ou pastille de zoom)", color = Muted, fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        zoomStops(zoomRange).forEach { z ->
+                            Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.update { it.copy(zoomRatio = z) } }
+                        }
+                    }
                 }
 
                 Section("FOCUS PEAKING") {
@@ -112,6 +135,7 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                 Section("VIDÉO") {
                     if (caps?.tonemapContrastCurve == true) {
                         SwitchRow("Courbe plate (flat) en plus du profil", s.flatTonemap) { vm.update { it.copy(flatTonemap = !it.flatTonemap) } }
+                        Hint("S'applique à la vidéo et au JPEG (jamais au RAW).")
                     } else {
                         Hint("Ce téléphone n'expose pas de courbe de tonemap personnalisée : HLG10 est la voie « log » disponible.")
                     }
@@ -131,16 +155,11 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                     SwitchRow("Écran noir une fois verrouillé", s.blackoutWhenLocked) { vm.update { it.copy(blackoutWhenLocked = !it.blackoutWhenLocked) } }
                     SwitchRow("Épingler l'app au verrouillage (recommandé)", s.usePinning) { vm.update { it.copy(usePinning = !it.usePinning) } }
                     Hint("L'épinglage bloque la barre de navigation, le volet de notifications et l'Assistant. Android demande une confirmation la première fois, et « Épinglage d'applications » doit être activé dans Paramètres › Sécurité.")
-                    SwitchRow("Volume = déclencheur aussi hors verrouillage", s.volumeShutterWhenUnlocked) { vm.update { it.copy(volumeShutterWhenUnlocked = !it.volumeShutterWhenUnlocked) } }
+                    SwitchRow("Boutons volume actifs aussi hors verrouillage", s.volumeShutterWhenUnlocked) { vm.update { it.copy(volumeShutterWhenUnlocked = !it.volumeShutterWhenUnlocked) } }
+                    Hint("Désactivé, le volume ne sert qu'une fois verrouillé — mais alors le verrouillage lui-même doit se faire par Vol+ long… donc laisse-le activé.")
                 }
 
-                Section("BOUTONS UNE FOIS VERROUILLÉ") {
-                    Hint("Vol+ ou Vol− court : photo / REC start-stop")
-                    Hint("Vol− maintenu 1 s : bascule photo ⇄ vidéo")
-                    Hint("Vol+ maintenu 1 s : écran noir on/off")
-                    Hint("Vol+ et Vol− maintenus 2,5 s : déverrouiller")
-                }
-
+                OutlinedButton(onClick = onHelp, Modifier.fillMaxWidth()) { Text("AIDE DES BOUTONS", fontWeight = FontWeight.Bold) }
                 OutlinedButton(onClick = onDiagnostics, Modifier.fillMaxWidth()) { Text("DIAGNOSTIC CAMÉRA", fontWeight = FontWeight.Bold) }
             }
         }

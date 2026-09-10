@@ -21,10 +21,13 @@ et on pilote tout aux **boutons de volume**.
 
 | Geste | Action |
 |---|---|
-| Vol+ ou Vol− (court) | Photo / REC start-stop |
-| Vol− maintenu 1 s | Bascule photo ⇄ vidéo |
-| Vol+ maintenu 1 s | Écran noir on/off |
-| Vol+ **et** Vol− maintenus 2,5 s | Verrouiller / déverrouiller |
+| Vol+ (court) | Photo |
+| Vol+ maintenu 1,5 s | Verrouiller / déverrouiller l'écran |
+| Vol− (court) | Démarrer / arrêter la vidéo |
+| Vol− maintenu 1 s | Objectif suivant (0,5× · 1× · 2× · 5×) |
+
+Photo et vidéo sont armées en permanence : il n'y a pas de « mode » à basculer. L'écran principal ne
+comporte qu'une roue crantée (réglages) et une pastille de zoom — tout le reste passe par les boutons.
 
 ## Build
 
@@ -40,8 +43,9 @@ verrouillage bloque aussi la navigation système.
 
 ## Architecture
 
-- `camera/CameraController` — façade CameraX : deux configurations exclusives (PHOTO / VIDÉO), ImageAnalysis
-  optionnel pour le peaking, réglages à chaud via `Camera2CameraControl`.
+- `camera/CameraController` — façade CameraX : Preview + ImageCapture + VideoCapture (+ ImageAnalysis pour le
+  peaking) armés ensemble, avec cascade de repli si le HAL refuse une combinaison ; réglages à chaud via
+  `Camera2CameraControl`.
 - `camera/CameraCapabilities` — sonde ce que le téléphone sait faire (formats, plages dynamiques, focus…).
 - `peaking/PeakingAnalyzer` — masque de netteté calculé sur le plan Y, double-buffered.
 - `lock/VolumeKeyHandler` — machine à états des boutons volume (court / long / combo).

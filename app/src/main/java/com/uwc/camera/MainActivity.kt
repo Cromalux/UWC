@@ -38,11 +38,11 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         keys = VolumeKeyHandler(lifecycleScope, object : VolumeKeyHandler.Callbacks {
-            override fun onShutter() = vm.shutter()
-            override fun onLongVolumeUp() = vm.toggleBlackout()
-            override fun onLongVolumeDown() = vm.toggleMode()
-            override fun onComboProgress(progress: Float) = vm.setUnlockProgress(progress)
-            override fun onComboComplete() = vm.toggleLock()
+            override fun onPhoto() = vm.takePhoto()
+            override fun onVideoToggle() = vm.toggleVideo()
+            override fun onCycleLens() = vm.cycleLens()
+            override fun onLockProgress(progress: Float) = vm.setUnlockProgress(progress)
+            override fun onLockToggle() = vm.toggleLock()
         })
 
         // Le geste/bouton retour ne doit rien faire une fois verrouillé.

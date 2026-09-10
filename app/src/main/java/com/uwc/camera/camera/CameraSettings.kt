@@ -1,7 +1,5 @@
 package com.uwc.camera.camera
 
-enum class CaptureMode(val label: String) { PHOTO("PHOTO"), VIDEO("VIDÉO") }
-
 enum class PhotoFormat(val label: String) { JPEG("JPEG"), RAW("RAW"), RAW_JPEG("RAW+JPEG") }
 
 enum class VideoProfile(val label: String) { SDR("SDR 8 bits"), HLG10("HLG10 · Log") }
@@ -20,11 +18,11 @@ enum class ScreenMode(val label: String) { MAX("Max"), SYSTEM("Système") }
 
 /**
  * Tous les réglages utilisateur. Persistés via [com.uwc.camera.SettingsStore].
- * Les champs "structurels" (mode, format, profil, peaking on/off) déclenchent un rebind
+ * Photo et vidéo sont armées en permanence (Vol+ = photo, Vol− = vidéo) : il n'y a pas de "mode".
+ * Les champs "structurels" (format, profil, peaking on/off) déclenchent un rebind
  * CameraX ; les autres sont appliqués à chaud via Camera2CameraControl.
  */
 data class CameraSettings(
-    val mode: CaptureMode = CaptureMode.PHOTO,
     val photoFormat: PhotoFormat = PhotoFormat.RAW_JPEG,
     val videoProfile: VideoProfile = VideoProfile.HLG10,
     val flatTonemap: Boolean = false,
@@ -50,18 +48,18 @@ data class CameraSettings(
     val blackoutWhenLocked: Boolean = false,
     val usePinning: Boolean = true,
     val volumeShutterWhenUnlocked: Boolean = true,
+    val onboardingDone: Boolean = false,
 )
 
 /** Sous-ensemble des réglages qui impose de reconstruire la session caméra. */
 data class BindConfig(
-    val mode: CaptureMode,
     val photoFormat: PhotoFormat,
     val videoProfile: VideoProfile,
     val peaking: Boolean,
     val stabilization: Boolean,
 ) {
     companion object {
-        fun from(s: CameraSettings) = BindConfig(s.mode, s.photoFormat, s.videoProfile, s.peakingEnabled, s.stabilization)
+        fun from(s: CameraSettings) = BindConfig(s.photoFormat, s.videoProfile, s.peakingEnabled, s.stabilization)
     }
 }
 

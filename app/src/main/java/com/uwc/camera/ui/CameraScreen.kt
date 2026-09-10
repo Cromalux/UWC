@@ -38,10 +38,14 @@ fun CameraScreen(vm: UwcViewModel) {
     val locked by vm.locked.collectAsState()
     val blackout by vm.blackout.collectAsState()
     val ready by vm.ready.collectAsState()
+    val progress by vm.unlockProgress.collectAsState()
+    val isRecording by vm.controller.isRecording.collectAsState()
+    val recMs by vm.controller.recordingMs.collectAsState()
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var showDiag by rememberSaveable { mutableStateOf(false) }
+    var showHelp by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(locked) { if (locked) { showSettings = false; showDiag = false } }
+    LaunchedEffect(locked) { if (locked) { showSettings = false; showDiag = false; showHelp = false } }
 
     PermissionGate {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -50,12 +54,21 @@ fun CameraScreen(vm: UwcViewModel) {
             if (locked) {
                 LockedHud(vm, settings)
             } else {
-                ControlsOverlay(vm, settings, settingsOpen = showSettings, onToggleSettings = { showSettings = !showSettings })
-                if (showSettings) SettingsSheet(vm, settings, onClose = { showSettings = false }, onDiagnostics = { showDiag = true })
+                ControlsOverlay(vm, settings, onOpenSettings = { showSettings = true })
+                if (isRecording) Box(Modifier.align(Alignment.TopCenter).padding(top = 16.dp)) { RecPill(recMs) }
+                if (showSettings) SettingsSheet(vm, settings, onClose = { showSettings = false }, onDiagnostics = { showDiag = true }, onHelp = { showHelp = true })
             }
+            if (isRecording) RecordingFrame()
+            if (progress > 0f) Box(Modifier.align(Alignment.Center)) { LockProgress(progress, locking = !locked) }
             StatusToast(vm)
-            if (locked && blackout) BlackoutOverlay()
+            if (locked && blackout) BlackoutOverlay(progress)
             if (showDiag) DiagnosticsDialog(vm) { showDiag = false }
+            if (ready && (showHelp || !settings.onboardingDone)) {
+                OnboardingDialog {
+                    showHelp = false
+                    if (!settings.onboardingDone) vm.update { it.copy(onboardingDone = true) }
+                }
+            }
         }
     }
 }
@@ -110,8 +123,9 @@ private fun StatusToast(vm: UwcViewModel) {
 }
 
 @Composable
-private fun BlackoutOverlay() {
+private fun BlackoutOverlay(progress: Float) {
     Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-        Text("écran éteint · Vol+ long pour rallumer", color = Color(0xFF2E2E2E), fontSize = 14.sp)
+        if (progress > 0f) LockProgress(progress, locking = false)
+        else Text("écran éteint · Vol+ 1,5 s pour déverrouiller", color = Color(0xFF2E2E2E), fontSize = 14.sp)
     }
 }
