@@ -2,6 +2,11 @@ package com.uwc.camera.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -32,8 +37,12 @@ fun LockedHud(vm: UwcViewModel, settings: CameraSettings) {
 
     Box(Modifier.fillMaxSize().padding(20.dp)) {
         Column(Modifier.align(Alignment.TopStart), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Surface(color = Accent, shape = RoundedCornerShape(8.dp)) {
-                Text("VERROUILLÉ", Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+            Surface(color = Color(0xF2FFFFFF), shape = RoundedCornerShape(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp)) {
+                    LockGlyph(Modifier.size(15.dp), Color(0xFF111316))
+                    Spacer(Modifier.width(7.dp))
+                    Text("Verrouillé", color = Color(0xFF111316), fontSize = 13.5.sp, fontWeight = FontWeight.Medium)
+                }
             }
             InfoBadge(activeInfo)
             InfoBadge(focusLabel(settings, focusD, caps), muted = true)

@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,14 +74,14 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
             Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(470.dp)
                 // Absorbe les clics sur le panneau pour qu'ils ne traversent pas vers la zone de fermeture.
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {}),
-            color = PanelBg,
+            color = SheetBg,
         ) {
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("RÉGLAGES", Modifier.weight(1f), color = Accent, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Réglages", Modifier.weight(1f), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
                     CloseButton(onClose)
                 }
 
