@@ -185,7 +185,7 @@ class CameraController(private val context: Context) {
                 .setDynamicRange(dr)
                 .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio).build())
             Camera2Interop.Extender(pb).setSessionCaptureCallback(sessionCallback)
-            return pb.build().also { it.surfaceProvider = previewView.surfaceProvider }
+            return pb.build()
         }
 
         fun photoUseCase(fmt: PhotoFormat): ImageCapture {
@@ -250,7 +250,6 @@ class CameraController(private val context: Context) {
         var info: String
 
         if (photoMode) {
-            val preview = buildPreview(DynamicRange.SDR)
             val wantedFmt = c.coercePhotoFormat(settings.photoFormat)
             // Dégradation : peaking d'abord, puis format (RAW → JPEG).
             data class P(val fmt: PhotoFormat, val peaking: Boolean)
@@ -259,15 +258,17 @@ class CameraController(private val context: Context) {
                 if (wantPeaking) add(P(wantedFmt, false))
                 if (wantedFmt != PhotoFormat.JPEG) add(P(PhotoFormat.JPEG, false))
             }.distinct()
-            var bound: P? = null
+            var bound: P? = null; var boundPreview: Preview? = null
             for (a in attempts) {
+                val prev = buildPreview(DynamicRange.SDR)
                 val ic = photoUseCase(a.fmt)
                 val an = if (a.peaking) analysisUseCase() else null
-                if (if (an != null) tryBind(preview, ic, an) else tryBind(preview, ic)) {
-                    imageCapture = ic; analysis = an; activePhotoFormat = a.fmt; bound = a; break
+                if (if (an != null) tryBind(prev, ic, an) else tryBind(prev, ic)) {
+                    imageCapture = ic; analysis = an; activePhotoFormat = a.fmt; bound = a; boundPreview = prev; break
                 }
             }
             if (bound == null) { failBind(); return }
+            boundPreview?.surfaceProvider = previewView.surfaceProvider
             _peakingActive.value = bound.peaking
             info = "PHOTO · ${bound.fmt.label}"
             if (bound.fmt != wantedFmt) onStatus("RAW indisponible ici → JPEG")
@@ -279,19 +280,18 @@ class CameraController(private val context: Context) {
                 if (wantedHlg) { add(V(true, wantPeaking)); if (wantPeaking) add(V(true, false)) }
                 add(V(false, wantPeaking)); if (wantPeaking) add(V(false, false))
             }.distinct()
-            var bound: V? = null; var vlabel = ""
+            var bound: V? = null; var vlabel = ""; var boundPreview: Preview? = null
             for (a in attempts) {
                 val dr = if (a.hlg) DynamicRange.HLG_10_BIT else DynamicRange.SDR
                 val prev = buildPreview(dr)
                 val (vc, label) = videoUseCase(a.hlg)
-                // L'analyseur de peaking prend la même plage dynamique que la vidéo (HLG10) :
-                // c'est ce qui permet peaking + 4K HLG10 simultanés.
                 val an = if (a.peaking) analysisUseCase() else null
                 if (if (an != null) tryBind(prev, vc, an) else tryBind(prev, vc)) {
-                    videoCapture = vc; analysis = an; vlabel = label; bound = a; break
+                    videoCapture = vc; analysis = an; vlabel = label; bound = a; boundPreview = prev; break
                 }
             }
             if (bound == null) { failBind(); return }
+            boundPreview?.surfaceProvider = previewView.surfaceProvider
             _peakingActive.value = bound.peaking
             info = "VIDÉO · $vlabel"
             if (bound.hlg != wantedHlg) onStatus("HLG10 indisponible ici → SDR")

@@ -233,20 +233,20 @@ fun ZoomPill(zoom: Float, onClick: () -> Unit) {
 @Composable
 fun ModeToggle(mode: CaptureMode, onToggle: () -> Unit) {
     Surface(color = PanelBg, shape = CircleShape, modifier = Modifier.clip(CircleShape).clickable(onClick = onToggle)) {
-        Row(Modifier.padding(horizontal = 6.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+        Row(
+            Modifier.padding(horizontal = 20.dp, vertical = 9.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             CaptureMode.entries.forEach { m ->
                 val on = m == mode
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        m.label,
-                        color = if (on) Color.White else Faint,
-                        fontSize = 12.5.sp,
-                        fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
-                        letterSpacing = 0.5.sp,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Box(Modifier.size(5.dp).clip(CircleShape).background(if (on) Accent else Color.Transparent))
-                }
+                Text(
+                    m.label,
+                    color = if (on) Accent else Faint,
+                    fontSize = 13.sp,
+                    fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                    letterSpacing = 0.6.sp,
+                )
             }
         }
     }
@@ -268,10 +268,10 @@ fun RecPill(ms: Long) {
     }
 }
 
-/** Cadre rouge pendant l'enregistrement. */
+/** Cadre rouge pendant l'enregistrement, coins arrondis pour épouser la dalle du téléphone. */
 @Composable
 fun RecordingFrame() {
-    Box(Modifier.fillMaxSize().border(3.dp, Danger))
+    Box(Modifier.fillMaxSize().border(3.dp, Danger, RoundedCornerShape(40.dp)))
 }
 
 /** Barre de progression de l'appui long Vol+ (verrouillage / déverrouillage). */

@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,6 +59,9 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
     val zoomRange by vm.controller.zoomRange.collectAsState()
     val isRecording by vm.controller.isRecording.collectAsState()
     val ctx = LocalContext.current
+    val cfg = LocalConfiguration.current
+    val portrait = cfg.screenHeightDp >= cfg.screenWidthDp
+    val panelWidth = if (portrait) (cfg.screenWidthDp * 0.92f).dp else 470.dp
     val audioLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.update { it.copy(recordAudio = granted) }
         if (!granted) vm.setStatus("Micro refusé — vidéo sans son")
@@ -71,7 +75,7 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
             ),
         )
         Surface(
-            Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(470.dp)
+            Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(panelWidth)
                 // Absorbe les clics sur le panneau pour qu'ils ne traversent pas vers la zone de fermeture.
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {}),
             color = SheetBg,

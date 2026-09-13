@@ -40,10 +40,17 @@ fun ControlsOverlay(vm: UwcViewModel, settings: CameraSettings, onOpenSettings: 
             if (shotCount > 0) InfoBadge("$shotCount photo${if (shotCount > 1) "s" else ""}", muted = true)
         }
 
-        Box(Modifier.align(Alignment.TopCenter)) { ModeToggle(settings.captureMode) { vm.toggleMode() } }
-
         Box(Modifier.align(Alignment.TopEnd)) { GearButton(onClick = onOpenSettings) }
 
-        Box(Modifier.align(Alignment.BottomCenter)) { ZoomPill(settings.zoomRatio) { vm.cycleLens() } }
+        // Zoom puis sélecteur de mode empilés en bas, façon appli native — évite tout chevauchement
+        // avec les lectures d'état en portrait comme en paysage.
+        Column(
+            Modifier.align(Alignment.BottomCenter),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ZoomPill(settings.zoomRatio) { vm.cycleLens() }
+            ModeToggle(settings.captureMode) { vm.toggleMode() }
+        }
     }
 }
