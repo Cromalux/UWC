@@ -52,7 +52,7 @@ fun VolumeHints() {
 
     // On décale la paire vers l'extrémité "Vol+" pour que l'icône photo tombe pile sur le bouton
     // (elle est sinon au milieu du bascule) : vers le haut en portrait, vers la gauche en paysage.
-    val shift = if (vertical) 30.dp else 46.dp
+    val shift = if (vertical) 30.dp else 26.dp
     val offset = if (vertical) {
         Modifier.offset(y = if (plusFirst) -shift else shift)
     } else {
