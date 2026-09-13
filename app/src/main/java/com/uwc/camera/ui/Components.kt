@@ -348,3 +348,41 @@ fun LockGlyph(modifier: Modifier = Modifier, color: Color = Color.White) {
         )
     }
 }
+
+/** Petit appareil photo au trait. */
+@Composable
+fun CameraGlyph(modifier: Modifier = Modifier, color: Color = Color.White) {
+    Canvas(modifier) {
+        val w = size.width; val h = size.height; val sw = w * 0.09f
+        drawRoundRect(
+            color = color, style = Stroke(width = sw),
+            topLeft = Offset(w * 0.06f, h * 0.28f),
+            size = androidx.compose.ui.geometry.Size(w * 0.88f, h * 0.56f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(sw * 1.5f, sw * 1.5f),
+        )
+        // bosse viseur
+        drawLine(color, Offset(w * 0.34f, h * 0.28f), Offset(w * 0.42f, h * 0.16f), strokeWidth = sw, cap = StrokeCap.Round)
+        drawLine(color, Offset(w * 0.66f, h * 0.28f), Offset(w * 0.58f, h * 0.16f), strokeWidth = sw, cap = StrokeCap.Round)
+        // objectif
+        drawCircle(color, radius = h * 0.17f, center = center, style = Stroke(width = sw))
+    }
+}
+
+/** Petite caméra vidéo au trait (corps + objectif triangulaire). */
+@Composable
+fun VideoGlyph(modifier: Modifier = Modifier, color: Color = Color.White) {
+    Canvas(modifier) {
+        val w = size.width; val h = size.height; val sw = w * 0.09f
+        drawRoundRect(
+            color = color, style = Stroke(width = sw),
+            topLeft = Offset(w * 0.08f, h * 0.3f),
+            size = androidx.compose.ui.geometry.Size(w * 0.56f, h * 0.4f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(sw, sw),
+        )
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.68f, h * 0.42f); lineTo(w * 0.92f, h * 0.3f)
+            lineTo(w * 0.92f, h * 0.7f); lineTo(w * 0.68f, h * 0.58f); close()
+        }
+        drawPath(path, color, style = Stroke(width = sw, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+    }
+}

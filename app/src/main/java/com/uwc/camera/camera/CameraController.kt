@@ -343,7 +343,7 @@ class CameraController(private val context: Context) {
         }
         awbFrozen = manualWb
 
-        if (s.flatTonemap && c.tonemapContrastCurve) {
+        if (s.flatTonemap && s.flatCurveApplicable && c.tonemapContrastCurve) {
             b.setCaptureRequestOption(CaptureRequest.TONEMAP_MODE, CameraMetadata.TONEMAP_MODE_CONTRAST_CURVE)
             b.setCaptureRequestOption(CaptureRequest.TONEMAP_CURVE, FLAT_CURVE)
         }

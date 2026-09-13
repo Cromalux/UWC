@@ -1,0 +1,50 @@
+UWC — Pack de LUT correction couleur sous-marine
+=================================================
+
+Ces LUT corrigent la dominante verte/bleue des images sous-marines
+(l'eau absorbe le rouge en premier). Format .cube 33x33x33.
+ENTRÉE ATTENDUE : Rec.709 (voir l'étape HLG ci-dessous pour la vidéo HLG10).
+
+CONTENU
+-------
+UWC_01_EauVerte_Legere.cube      Correction douce, eau légèrement verte.
+UWC_02_EauVerte_Forte.cube       Correction forte, eau très verte / turbide.
+UWC_03_EauBleue_Tropicale.cube   Eau bleue tropicale (récupère le rouge, casse le bleu).
+UWC_04_Rechauffe_Neutre.cube     Réchauffement neutre, léger — bon point de départ.
+UWC_05_Recif_Punch.cube          "Look" créatif (contraste + saturation), À APPLIQUER APRÈS correction.
+
+ORDRE CONSEILLÉ
+---------------
+1) Corriger la dominante avec UNE des LUT 01→04 (selon l'eau).
+2) Ajuster finement en dessous (balance des blancs, expo) si besoin.
+3) (Option) Ajouter UWC_05_Recif_Punch pour le rendu final.
+
+PREMIERE PRO — VIDÉO HLG10 (10 bits)
+------------------------------------
+Le HLG n'est PAS du Rec.709 : il faut d'abord le convertir, sinon les LUT réagissent mal.
+Méthode simple (gestion des couleurs Premiere) :
+  - Clic droit sur le clip > Modifier > Interpréter le métrage > "Remplacer par
+    Rec. 2100 HLG" si ce n'est pas déjà détecté.
+  - Séquence en Rec.709 : Premiere applique le tone-map HLG→709 automatiquement.
+  - Puis dans Lumetri : Créatif > Look > Parcourir… > choisir une LUT UWC.
+Méthode manuelle : applique d'abord ta propre conversion HLG→709 (Input LUT), puis les LUT UWC en Créatif.
+
+PREMIERE PRO — CHARGER UNE LUT
+------------------------------
+Panneau Lumetri Color :
+  - Correction de base > Rechercher LUT d'entrée (Input LUT) > Parcourir…  (pour la correction)
+  ou
+  - Créatif > Look > Parcourir…  (pratique pour empiler correction puis "punch")
+Astuce : le curseur "Intensité" (Créatif) permet de doser la LUT.
+
+INSTALLATION PERMANENTE (facultatif)
+------------------------------------
+Copie les .cube dans le dossier LUT de Premiere pour les voir dans le menu déroulant :
+  macOS : /Applications/Adobe Premiere Pro <version>/Contents/Lumetri/LUTs/Creative
+Puis redémarre Premiere.
+
+NOTE
+----
+Ces LUT sont un point de départ, pas une vérité absolue : chaque plongée a sa lumière.
+Dose l'intensité et affine la balance des blancs par-dessus. Filme de préférence en HLG10
+(et non SDR + courbe plate) pour garder le maximum de latitude.

@@ -64,6 +64,7 @@ fun CameraScreen(vm: UwcViewModel) {
             if (isRecording) RecordingFrame()
             if (progress > 0f) Box(Modifier.align(Alignment.Center)) { LockProgress(progress, locking = !locked) }
             StatusToast(vm)
+            if (!showSettings && !(locked && blackout)) VolumeHints()
             if (locked && blackout) BlackoutOverlay(progress)
             if (showDiag) DiagnosticsDialog(vm) { showDiag = false }
             if (ready && (showHelp || !settings.onboardingDone)) {

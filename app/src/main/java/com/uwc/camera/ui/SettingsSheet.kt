@@ -44,6 +44,7 @@ import com.uwc.camera.camera.CameraSettings
 import com.uwc.camera.camera.FocusMode
 import com.uwc.camera.camera.PeakingColors
 import com.uwc.camera.camera.CaptureMode
+import com.uwc.camera.camera.flatCurveApplicable
 import com.uwc.camera.camera.PhotoFormat
 import com.uwc.camera.camera.VideoProfile
 import com.uwc.camera.camera.ScreenMode
@@ -178,8 +179,14 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
 
                 Section("VIDÉO") {
                     if (caps?.tonemapContrastCurve == true) {
-                        SwitchRow("Courbe plate (flat) en plus du profil", s.flatTonemap) { vm.update { it.copy(flatTonemap = !it.flatTonemap) } }
-                        Hint("S'applique à la vidéo et au JPEG (jamais au RAW).")
+                        val flatOk = s.flatCurveApplicable
+                        SwitchRow("Courbe plate (flat)", s.flatTonemap && flatOk, enabled = flatOk) {
+                            if (flatOk) vm.update { it.copy(flatTonemap = !it.flatTonemap) }
+                        }
+                        Hint(
+                            if (flatOk) "Uniquement en vidéo SDR et photo JPEG : aplatit le contraste pour garder de la latitude à l'étalonnage."
+                            else "Désactivée : inutile en HLG10 (déjà log) et en RAW. Passe en vidéo SDR ou photo JPEG pour l'utiliser.",
+                        )
                     } else {
                         Hint("Ce téléphone n'expose pas de courbe de tonemap personnalisée : HLG10 est la voie « log » disponible.")
                     }

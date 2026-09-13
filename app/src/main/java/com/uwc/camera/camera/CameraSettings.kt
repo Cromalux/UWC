@@ -92,3 +92,11 @@ object UnderwaterOptics {
     }
     val presetsMeters = listOf("∞" to 0f, "3 m" to 3f, "1,5 m" to 1.5f, "1 m" to 1f, "50 cm" to 0.5f)
 }
+
+/**
+ * La courbe plate n'a de sens que sur une image "développée" par le téléphone :
+ * vidéo SDR ou photo JPEG. En HLG10 (log) et en RAW/RAW+JPEG elle est inutile ou nuisible.
+ */
+val CameraSettings.flatCurveApplicable: Boolean
+    get() = (captureMode == CaptureMode.VIDEO && videoProfile == VideoProfile.SDR) ||
+        (captureMode == CaptureMode.PHOTO && photoFormat == PhotoFormat.JPEG)
