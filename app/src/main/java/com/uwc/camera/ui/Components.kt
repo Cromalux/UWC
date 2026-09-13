@@ -287,18 +287,29 @@ fun RecordingFrame() {
             ).mapNotNull { insets.getRoundedCorner(it)?.radius }.maxOrNull() ?: 0
         } else 0
     }
-    val radius = with(density) { radiusPx.toDp() }.let { if (it > 0.dp) it else 30.dp }
-    Box(Modifier.fillMaxSize().border(3.dp, Danger, RoundedCornerShape(radius)))
+    val deviceRadius = with(density) { radiusPx.toDp() }.let { if (it > 0.dp) it else 30.dp }
+    // On rentre le cadre de l'épaisseur du trait pour qu'il ne soit pas rogné par le coin physique,
+    // et on garde un arrondi concentrique (rayon écran − marge).
+    val inset = 4.dp
+    val radius = (deviceRadius - inset).coerceAtLeast(0.dp)
+    Box(Modifier.fillMaxSize().padding(inset).border(3.dp, Danger, RoundedCornerShape(radius)))
 }
 
-/** Rappel discret au centre (déverrouillé) : penser à verrouiller avant de plonger. */
+/** Rappel discret au centre (déverrouillé) : verrouiller avant de plonger, avec le geste exact. */
 @Composable
 fun LockReminder() {
     Surface(color = PanelBg, shape = RoundedCornerShape(16.dp)) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-            LockGlyph(Modifier.size(14.dp), Muted)
-            Spacer(Modifier.width(8.dp))
-            Text("Verrouille avant de te mettre à l'eau", color = Muted, fontSize = 13.sp)
+        Column(
+            Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LockGlyph(Modifier.size(14.dp), Muted)
+                Spacer(Modifier.width(8.dp))
+                Text("Verrouille avant de te mettre à l'eau", color = Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
+            }
+            Spacer(Modifier.height(3.dp))
+            Text("Maintiens Vol +  ·  1,5 s", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
         }
     }
 }

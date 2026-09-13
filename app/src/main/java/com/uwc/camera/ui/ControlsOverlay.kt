@@ -36,7 +36,6 @@ fun ControlsOverlay(vm: UwcViewModel, settings: CameraSettings, onOpenSettings: 
 
     Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 10.dp)) {
         Column(Modifier.align(Alignment.TopStart), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (isRecording) RecPill(recMs)
             InfoBadge(activeInfo.ifEmpty { "initialisation…" })
             InfoBadge(focusLabel(settings, focusD, caps), muted = true)
             if (settings.whiteBalance == WhiteBalance.MANUAL) {
@@ -47,6 +46,8 @@ fun ControlsOverlay(vm: UwcViewModel, settings: CameraSettings, onOpenSettings: 
         }
 
         Box(Modifier.align(Alignment.TopEnd)) { GearButton(onClick = onOpenSettings) }
+
+        if (isRecording) Box(Modifier.align(Alignment.Center)) { RecPill(recMs) }
 
         if (!isRecording) {
             Box(Modifier.align(Alignment.Center)) { LockReminder() }
