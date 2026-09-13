@@ -52,7 +52,10 @@ fun ControlsOverlay(vm: UwcViewModel, settings: CameraSettings, onOpenSettings: 
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ZoomPill(settings.zoomRatio) { vm.cycleLens() }
+            // En vidéo l'objectif est fixe (0,5×) : pas de pastille de zoom.
+            if (settings.captureMode == CaptureMode.PHOTO) {
+                ZoomPill(settings.zoomRatio) { vm.cycleLens() }
+            }
             ModeToggle(settings.captureMode) { vm.toggleMode() }
         }
     }

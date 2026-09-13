@@ -63,11 +63,12 @@ data class BindConfig(
     val captureMode: CaptureMode,
     val photoFormat: PhotoFormat,
     val videoProfile: VideoProfile,
+    val videoFps: Int,
     val peaking: Boolean,
     val stabilization: Boolean,
 ) {
     companion object {
-        fun from(s: CameraSettings) = BindConfig(s.captureMode, s.photoFormat, s.videoProfile, s.peakingEnabled, s.stabilization)
+        fun from(s: CameraSettings) = BindConfig(s.captureMode, s.photoFormat, s.videoProfile, s.videoFps, s.peakingEnabled, s.stabilization)
     }
 }
 
