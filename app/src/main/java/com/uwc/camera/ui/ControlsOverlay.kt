@@ -31,9 +31,12 @@ fun ControlsOverlay(vm: UwcViewModel, settings: CameraSettings, onOpenSettings: 
     val caps by vm.controller.capabilities.collectAsState()
     val peakingActive by vm.controller.peakingActive.collectAsState()
     val shotCount by vm.shotCount.collectAsState()
+    val isRecording by vm.controller.isRecording.collectAsState()
+    val recMs by vm.controller.recordingMs.collectAsState()
 
     Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 10.dp)) {
         Column(Modifier.align(Alignment.TopStart), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (isRecording) RecPill(recMs)
             InfoBadge(activeInfo.ifEmpty { "initialisation…" })
             InfoBadge(focusLabel(settings, focusD, caps), muted = true)
             if (settings.whiteBalance == WhiteBalance.MANUAL) {
@@ -44,6 +47,10 @@ fun ControlsOverlay(vm: UwcViewModel, settings: CameraSettings, onOpenSettings: 
         }
 
         Box(Modifier.align(Alignment.TopEnd)) { GearButton(onClick = onOpenSettings) }
+
+        if (!isRecording) {
+            Box(Modifier.align(Alignment.Center)) { LockReminder() }
+        }
 
         // Zoom puis sélecteur de mode empilés en bas, façon appli native — évite tout chevauchement
         // avec les lectures d'état en portrait comme en paysage.

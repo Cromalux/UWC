@@ -43,6 +43,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -268,10 +271,36 @@ fun RecPill(ms: Long) {
     }
 }
 
-/** Cadre rouge pendant l'enregistrement, coins arrondis pour épouser la dalle du téléphone. */
+/** Cadre rouge pendant l'enregistrement, épousant les coins arrondis RÉELS de l'écran. */
 @Composable
 fun RecordingFrame() {
-    Box(Modifier.fillMaxSize().border(3.dp, Danger, RoundedCornerShape(40.dp)))
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val radiusPx = remember(view) {
+        val insets = view.rootWindowInsets
+        if (android.os.Build.VERSION.SDK_INT >= 31 && insets != null) {
+            listOf(
+                android.view.RoundedCorner.POSITION_TOP_LEFT,
+                android.view.RoundedCorner.POSITION_TOP_RIGHT,
+                android.view.RoundedCorner.POSITION_BOTTOM_LEFT,
+                android.view.RoundedCorner.POSITION_BOTTOM_RIGHT,
+            ).mapNotNull { insets.getRoundedCorner(it)?.radius }.maxOrNull() ?: 0
+        } else 0
+    }
+    val radius = with(density) { radiusPx.toDp() }.let { if (it > 0.dp) it else 30.dp }
+    Box(Modifier.fillMaxSize().border(3.dp, Danger, RoundedCornerShape(radius)))
+}
+
+/** Rappel discret au centre (déverrouillé) : penser à verrouiller avant de plonger. */
+@Composable
+fun LockReminder() {
+    Surface(color = PanelBg, shape = RoundedCornerShape(16.dp)) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+            LockGlyph(Modifier.size(14.dp), Muted)
+            Spacer(Modifier.width(8.dp))
+            Text("Verrouille avant de te mettre à l'eau", color = Muted, fontSize = 13.sp)
+        }
+    }
 }
 
 /** Barre de progression de l'appui long Vol+ (verrouillage / déverrouillage). */

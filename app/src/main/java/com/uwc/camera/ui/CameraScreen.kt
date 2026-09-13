@@ -56,7 +56,6 @@ fun CameraScreen(vm: UwcViewModel) {
             } else {
                 if (!showSettings) {
                     ControlsOverlay(vm, settings, onOpenSettings = { showSettings = true })
-                    if (isRecording) Box(Modifier.align(Alignment.TopCenter).padding(top = 16.dp)) { RecPill(recMs) }
                 } else {
                     SettingsSheet(vm, settings, onClose = { showSettings = false }, onDiagnostics = { showDiag = true }, onHelp = { showHelp = true })
                 }
