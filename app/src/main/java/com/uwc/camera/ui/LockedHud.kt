@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -35,7 +38,7 @@ fun LockedHud(vm: UwcViewModel, settings: CameraSettings) {
     val caps by vm.controller.capabilities.collectAsState()
     val shotCount by vm.shotCount.collectAsState()
 
-    Box(Modifier.fillMaxSize().padding(20.dp)) {
+    Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(12.dp)) {
         Column(Modifier.align(Alignment.TopStart), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Surface(color = Color(0xF2FFFFFF), shape = RoundedCornerShape(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp)) {

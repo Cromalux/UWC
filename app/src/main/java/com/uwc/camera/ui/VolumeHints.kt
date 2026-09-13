@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,8 +50,17 @@ fun VolumeHints() {
     val plus = @Composable { HintChip(plus = true) }
     val minus = @Composable { HintChip(plus = false) }
 
+    // On décale la paire vers l'extrémité "Vol+" pour que l'icône photo tombe pile sur le bouton
+    // (elle est sinon au milieu du bascule) : vers le haut en portrait, vers la gauche en paysage.
+    val shift = if (vertical) 30.dp else 46.dp
+    val offset = if (vertical) {
+        Modifier.offset(y = if (plusFirst) -shift else shift)
+    } else {
+        Modifier.offset(x = if (plusFirst) -shift else shift)
+    }
+
     Box(Modifier.fillMaxSize().padding(6.dp)) {
-        Box(Modifier.align(align)) {
+        Box(Modifier.align(align).then(offset)) {
             if (vertical) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (plusFirst) { plus(); minus() } else { minus(); plus() }

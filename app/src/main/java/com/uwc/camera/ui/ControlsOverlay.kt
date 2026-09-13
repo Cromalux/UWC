@@ -3,7 +3,10 @@ package com.uwc.camera.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,7 +32,7 @@ fun ControlsOverlay(vm: UwcViewModel, settings: CameraSettings, onOpenSettings: 
     val peakingActive by vm.controller.peakingActive.collectAsState()
     val shotCount by vm.shotCount.collectAsState()
 
-    Box(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp)) {
+    Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 10.dp)) {
         Column(Modifier.align(Alignment.TopStart), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             InfoBadge(activeInfo.ifEmpty { "initialisation…" })
             InfoBadge(focusLabel(settings, focusD, caps), muted = true)
