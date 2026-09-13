@@ -25,6 +25,7 @@ class SettingsStore(private val context: Context) {
         val captureMode = stringPreferencesKey("captureMode")
         val photoFormat = stringPreferencesKey("photoFormat")
         val videoProfile = stringPreferencesKey("videoProfile")
+        val videoFps = intPreferencesKey("videoFps")
         val flatTonemap = booleanPreferencesKey("flatTonemap")
         val recordAudio = booleanPreferencesKey("recordAudio")
         val stabilization = booleanPreferencesKey("stabilization")
@@ -52,6 +53,7 @@ class SettingsStore(private val context: Context) {
             captureMode = enumOr(p[K.captureMode], d.captureMode),
             photoFormat = enumOr(p[K.photoFormat], d.photoFormat),
             videoProfile = enumOr(p[K.videoProfile], d.videoProfile),
+            videoFps = p[K.videoFps] ?: d.videoFps,
             flatTonemap = p[K.flatTonemap] ?: d.flatTonemap,
             recordAudio = p[K.recordAudio] ?: d.recordAudio,
             stabilization = p[K.stabilization] ?: d.stabilization,
@@ -78,6 +80,7 @@ class SettingsStore(private val context: Context) {
             p[K.captureMode] = s.captureMode.name
             p[K.photoFormat] = s.photoFormat.name
             p[K.videoProfile] = s.videoProfile.name
+            p[K.videoFps] = s.videoFps
             p[K.flatTonemap] = s.flatTonemap
             p[K.recordAudio] = s.recordAudio
             p[K.stabilization] = s.stabilization

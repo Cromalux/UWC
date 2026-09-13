@@ -53,6 +53,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.max
 import kotlin.math.pow
 
 /**
@@ -202,19 +203,21 @@ class CameraController(private val context: Context) {
                 .build()
         }
 
-        fun videoUseCase(hlg: Boolean): Pair<VideoCapture<Recorder>, String> {
+        fun videoUseCase(hlg: Boolean, fps: Int): VideoCapture<Recorder> {
             val qualities = if (hlg) c.videoQualitiesHlg else c.videoQualitiesSdr
-            val preferred = listOf(Quality.UHD, Quality.FHD, Quality.HD).firstOrNull { it in qualities }
+            // 4K seulement à 30 ; à 60 on ne vise pas l'UHD (non exposé), on laisse la cascade descendre.
+            val prefList = if (fps >= 60) listOf(Quality.FHD, Quality.HD) else listOf(Quality.UHD, Quality.FHD, Quality.HD)
+            val preferred = prefList.firstOrNull { it in qualities }
             val selector = if (preferred != null)
                 QualitySelector.from(preferred, FallbackStrategy.lowerQualityOrHigherThan(preferred))
             else QualitySelector.from(Quality.HIGHEST)
             val recorder = Recorder.Builder().setQualitySelector(selector).build()
             val b = VideoCapture.Builder(recorder)
                 .setTargetRotation(rotation)
+                .setTargetFrameRate(Range(fps, fps))
                 .setDynamicRange(if (hlg) DynamicRange.HLG_10_BIT else DynamicRange.SDR)
             if (settings.stabilization && c.stabilizationSupported) b.setVideoStabilizationEnabled(true)
-            val label = "${if (hlg) "HLG10" else "SDR"} ${preferred?.let(CameraCapabilities::qualityLabel) ?: ""}".trim()
-            return b.build() to label
+            return b.build()
         }
 
         // ImageAnalysis ne supporte que le SDR dans CameraX (setDynamicRange(HLG) lève une exception).
@@ -274,28 +277,39 @@ class CameraController(private val context: Context) {
             if (bound.fmt != wantedFmt) onStatus("RAW indisponible ici → JPEG")
             else if (bound.peaking != wantPeaking) onStatus("Focus peaking indisponible")
         } else {
-            val wantedHlg = settings.videoProfile == VideoProfile.HLG10 && c.supportsHlg10
+            val wantedFps = settings.videoFps
+            // Réalité CameraX sur ce Pixel : LOG (HLG10) + 4K uniquement à 30fps ; à 60fps c'est SDR ~720p.
+            val useHlg = wantedFps == 30 && settings.videoProfile == VideoProfile.HLG10 && c.supportsHlg10
             data class V(val hlg: Boolean, val peaking: Boolean)
             val attempts = buildList {
-                if (wantedHlg) { add(V(true, wantPeaking)); if (wantPeaking) add(V(true, false)) }
+                if (useHlg) { add(V(true, wantPeaking)); if (wantPeaking) add(V(true, false)) }
                 add(V(false, wantPeaking)); if (wantPeaking) add(V(false, false))
             }.distinct()
-            var bound: V? = null; var vlabel = ""; var boundPreview: Preview? = null
+            var bound: V? = null; var boundPreview: Preview? = null
             for (a in attempts) {
                 val dr = if (a.hlg) DynamicRange.HLG_10_BIT else DynamicRange.SDR
                 val prev = buildPreview(dr)
-                val (vc, label) = videoUseCase(a.hlg)
+                val vc = videoUseCase(a.hlg, wantedFps)
                 val an = if (a.peaking) analysisUseCase() else null
                 if (if (an != null) tryBind(prev, vc, an) else tryBind(prev, vc)) {
-                    videoCapture = vc; analysis = an; vlabel = label; bound = a; boundPreview = prev; break
+                    videoCapture = vc; analysis = an; bound = a; boundPreview = prev; break
                 }
             }
             if (bound == null) { failBind(); return }
             boundPreview?.surfaceProvider = previewView.surfaceProvider
             _peakingActive.value = bound.peaking
-            info = "VIDÉO · $vlabel"
-            if (bound.hlg != wantedHlg) onStatus("HLG10 indisponible ici → SDR")
-            else if (bound.peaking != wantPeaking) onStatus("Focus peaking indisponible en $vlabel")
+            // Libellé à partir de la résolution réellement négociée (et non de la demande).
+            val res = videoCapture?.resolutionInfo?.resolution
+            val resL = res?.let {
+                when (val m = max(it.width, it.height)) {
+                    in 2000..Int.MAX_VALUE -> "4K"
+                    in 1400 until 2000 -> "1080p"
+                    in 900 until 1400 -> "720p"
+                    else -> "${it.width}×${it.height}"
+                }
+            } ?: ""
+            info = "VIDÉO · ${if (bound.hlg) "HLG10" else "SDR"} $resL ${wantedFps}p".replace(Regex(" +"), " ").trim()
+            if (bound.peaking != wantPeaking) onStatus("Focus peaking indisponible")
         }
 
         _activeInfo.value = info
@@ -355,7 +369,8 @@ class CameraController(private val context: Context) {
         }
 
         Camera2CameraControl.from(cam.cameraControl).setCaptureRequestOptions(b.build())
-        cam.cameraControl.setZoomRatio(s.zoomRatio.coerceIn(_zoomRange.value))
+        val targetZoom = if (s.captureMode == CaptureMode.VIDEO) _zoomRange.value.start else s.zoomRatio.coerceIn(_zoomRange.value)
+        cam.cameraControl.setZoomRatio(targetZoom)
     }
 
     fun updateRotation(rotation: Int) {

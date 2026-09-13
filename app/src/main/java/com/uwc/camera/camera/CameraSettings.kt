@@ -28,6 +28,8 @@ data class CameraSettings(
     val captureMode: CaptureMode = CaptureMode.PHOTO,
     val photoFormat: PhotoFormat = PhotoFormat.RAW_JPEG,
     val videoProfile: VideoProfile = VideoProfile.HLG10,
+    /** Cadence vidéo cible. Le 4K LOG est limité à 30 sur ce matériel (CameraX). */
+    val videoFps: Int = 30,
     val flatTonemap: Boolean = false,
     val recordAudio: Boolean = false,
     val stabilization: Boolean = true,

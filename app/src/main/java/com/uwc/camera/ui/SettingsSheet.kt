@@ -110,17 +110,12 @@ fun SettingsSheet(vm: UwcViewModel, s: CameraSettings, onClose: () -> Unit, onDi
                         }
                         if (raw) Hint("Le 0,5× (ultra grand-angle) ne fait pas de RAW : en RAW/RAW+JPEG l'app reste sur le capteur principal. Pour le 0,5×, passe en JPEG ou en vidéo.")
                     } else {
-                        Text("Profil vidéo", color = Muted, fontSize = 13.sp)
-                        ChipRow(VideoProfile.entries, s.videoProfile, label = { it.label },
-                            enabled = { p -> !isRecording && (p == VideoProfile.SDR || (caps?.supportsHlg10 ?: true)) }) { p ->
-                            vm.update { it.copy(videoProfile = p) }
+                        Text("Cadence", color = Muted, fontSize = 13.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Chip("30 · 4K LOG", selected = s.videoFps == 30, enabled = !isRecording) { vm.update { it.copy(videoFps = 30) } }
+                            Chip("60 · 720p", selected = s.videoFps == 60, enabled = !isRecording) { vm.update { it.copy(videoFps = 60) } }
                         }
-                        Text("Objectif", color = Muted, fontSize = 13.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            zoomStops(zoomRange).forEach { z ->
-                                Chip(zoomLabel(z), selected = kotlin.math.abs(s.zoomRatio - z) < 0.05f) { vm.setZoom(z) }
-                            }
-                        }
+                        Hint("Vidéo toujours en ultra grand-angle (0,5×). Le 4K LOG (HLG10) est limité à 30 fps ; le 60 fps passe en 720p SDR (limite du téléphone).")
                     }
                     SwitchRow("Anti-flou (vitesse rapide, ISO auto)", s.antiBlur, enabled = caps?.antiBlurFps != null) {
                         vm.update { it.copy(antiBlur = !it.antiBlur) }
